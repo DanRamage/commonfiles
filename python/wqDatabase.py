@@ -48,22 +48,14 @@ class wqDB(xeniaSQLite):
     if(sensorID != None and sensorID != -1):
       start_date = dateTime - timedelta(hours=prevHourCnt)
       #m_date >= strftime('%%Y-%%m-%%dT%%H:%%M:%%S', datetime( '%s', '-%d hours' )) AND \
-      if prevHourCnt != 0:
-        sql = "SELECT SUM(m_value) \
-               FROM multi_obs \
-               WHERE\
-                 m_date >= '%s' AND\
-                 m_date < '%s' AND\
-                 sensor_id = %d AND m_value >= 0.0;"\
-                 % (start_date.strftime('%Y-%m-%dT%H:%M:%S'), dateTime.strftime('%Y-%m-%dT%H:%M:%S'), sensorID)
-      else:
-        sql = "SELECT m_value \
-               FROM multi_obs \
-               WHERE\
-                 m_date = '%s' AND \
-                 sensor_id = %d AND m_value >= 0.0;"\
-                 % (dateTime.strftime('%Y-%m-%dT%H:%M:%S'), sensorID)
 
+      sql = "SELECT SUM(m_value) \
+             FROM multi_obs \
+             WHERE\
+               m_date >= '%s' AND\
+               m_date < '%s' AND\
+               sensor_id = %d AND m_value >= 0.0;"\
+               % (start_date.strftime('%Y-%m-%dT%H:%M:%S'), dateTime.strftime('%Y-%m-%dT%H:%M:%S'), sensorID)
       try:
         dbCursor = self.DB.cursor()
         dbCursor.execute(sql)
