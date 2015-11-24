@@ -1,5 +1,5 @@
-import sys
-sys.path.append('../commonfiles')
+#import sys
+#sys.path.append('../commonfiles')
 
 from suds.client import Client
 from suds import WebFault
