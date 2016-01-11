@@ -191,3 +191,4 @@ def calcAvgSpeedAndDir(speed_dir_tuples):
 
   return (spdAvg,dirAvg)
 
+
