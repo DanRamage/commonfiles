@@ -13,7 +13,7 @@ import array
 from numpy import NaN, Inf, arange, isscalar, asarray, sqrt, mean, square
 from numpy import array as np_array
 
-from peakdetect_algorithms import peakdetect as pda_peakdetect
+#from peakdetect_algorithms import peakdetect as pda_peakdetect
 #import matplotlib
 #matplotlib.use('Agg')
 #import matplotlib.pyplot as plt
