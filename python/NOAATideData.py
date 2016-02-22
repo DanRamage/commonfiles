@@ -1,14 +1,19 @@
 import sys
-sys.path.append('../commonfiles')
+sys.path.append('../commonfiles/python')
 
 from suds.client import Client
 from suds import WebFault
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytz import timezone as pytz_timezone
 from date_time_utils import get_utc_epoch, datetime2matlabdn
+import operator
 import array
 
+from numpy import NaN, Inf, arange, isscalar, asarray, sqrt, mean, square
+from numpy import array as np_array
+
+#from peakdetect_algorithms import peakdetect as pda_peakdetect
 #import matplotlib
 #matplotlib.use('Agg')
 #import matplotlib.pyplot as plt
@@ -122,7 +127,7 @@ class noaaTideData(object):
     tideData['H'] = None
     tideData['PeakValue'] = None
     tideData['ValleyValue'] = None
-
+    tideData['tide_stage'] = None
     try:
       if self.use_raw:
         wlData = self.getWaterLevelRawSixMinuteData(beginDate.strftime('%Y%m%d'), endDate.strftime('%Y%m%d'), station, datum, units, timezone)
@@ -132,12 +137,14 @@ class noaaTideData(object):
       if self.logger:
         self.logger.exception(e)
     else:
+      chordLen = 10
+
+      #Determine the tide level using all the tide data points.
+      #tideData['tide_stage'] = self.get_tide_stage(wlData, chordLen, endDate, timezone)
 
       smoothDataROC = array.array('d')
       rawDataROC = array.array('d')
       expSmoothedData =  array.array('d')
-      #tidePts = array.array('d')
-      #timePts = array.array('d')
       dataLen = len(wlData.item)
       ndx = 0
       alpha = 0.5
@@ -171,10 +178,6 @@ class noaaTideData(object):
           timeN = int(get_utc_epoch(timeStruct))
           timeStruct = utc_tz.localize(datetime.strptime(wlData.item[ndx-1]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
           timeN1 = int(get_utc_epoch(timeStruct))
-          #timeStruct = utc_tz.localize(time.strptime(wlData.item[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
-          #timeN = time.mktime(timeStruct)
-          #timeStruct = utc_tz.localize(time.strptime(wlData.item[ndx-1]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
-          #timeN1 = time.mktime(timeStruct)
 
           #For each N+1 we now use the formula.
           Yn = (alpha * wlData.item[ndx]['WL']) + ((1 - alpha) * expSmoothedData[ndx-1])
@@ -189,25 +192,26 @@ class noaaTideData(object):
 
 
 
-      ndx = 0
+      #ndx = 0
       a = None
       b = None
       c = None
-      dirChangeCnt = 0
-      chordLen = 10
+      #dirChangeCnt = 0
       midPt = chordLen / 2
-      ptFound = False
-      stopProc = False
-      dataLen = len(wlData.item)
-      slopePositive = False
+      #ptFound = False
+      #stopProc = False
+      #dataLen = len(wlData.item)
+      #slopePositive = False
 
       #plt.plot(timePts,tidePts,'o', x_new, y_new)
       ##plt.xlim([timePts[0]-1, timePts[-1] + 1 ])
       #plt.savefig('/users/danramage/tmp/out.png', dpi=96)
 
-      if(self.logger != None):
+      if self.logger:
         self.logger.info("Checking Raw data.")
 
+      self.find_tide_change_points(wlData.item, chordLen, tideData)
+      """
       tideChange = None
       changeNdx = None
       lastSlope = None
@@ -309,7 +313,7 @@ class noaaTideData(object):
                                     'date': timeStamp}
 
         ndx += 1
-
+      """
       if smoothData:
         print("Checking smoothed data.")
         dataLen = len(expSmoothedData)
@@ -370,7 +374,243 @@ class noaaTideData(object):
           tideFile.write(outbuf)
         tideFile.close()
     #If we didn't have all the inflection points, we'll use the peak/valley values for the missing one(s).
+
+
     return(tideData)
+
+  def find_tide_change_points(self, tide_recs, chordLen, tideData):
+    a = None
+    b = None
+    c = None
+    stopProc = False
+
+    tideChange = None
+    changeNdx = None
+    lastSlope = None
+    dataLen = len(tide_recs)
+    for ndx in range(0, len(tide_recs)):
+      a =tide_recs[ndx]['WL']
+      timeStamp = tide_recs[ndx].timeStamp
+      if ndx + chordLen < dataLen - 1:
+        c = tide_recs[ndx+chordLen]['WL']
+      else:
+        stopProc = True
+      if tideChange is None:
+        tideChange = a
+        tide_change_ts = timeStamp
+      if not stopProc:
+        #Calc slope
+        #Ascending
+        if c - a > 0:
+          if lastSlope == 0:
+            if tideData['LL'] is None:
+              #tideData['LL'] = tideChange
+              tideData['LL'] = {
+                                'value' : tideChange,
+                                'date' : tide_change_ts
+                               }
+            elif tideChange < tideData['LL']['value']:
+              tmp = tideData['LL']
+              #tideData['LL'] = tideChange
+              tideData['LL'] = {
+                                'value' : tideChange,
+                                'date' : tide_change_ts
+                               }
+              tideData['L'] = tmp
+            else:
+              tideData['L'] = {
+                                'value' : tideChange,
+                                'date' : tide_change_ts
+                               }
+
+            #print("Tide Min at: %f@%s" %(tideChange,timeStamp))
+            if self.logger:
+              self.logger.debug("Tide Min at: %f@%s" %(tideChange,tide_change_ts))
+            #Found the max tide, so another is not going to occur any quicker than the chord length, so increment the ndx.
+            ndx += chordLen
+            #Slope has changed direction.
+            lastSlope = 1
+            continue
+          lastSlope = 1
+
+          if(a > tideChange):
+            tideChange = a
+            tide_change_ts = timeStamp
+            changeNdx = ndx
+        #Descending
+        elif c - a < 0:
+          if lastSlope == 1:
+            if tideData['HH'] is None:
+              #tideData['HH'] = tideChange
+              tideData['HH'] = {
+                                'value' : tideChange,
+                                'date' : tide_change_ts
+                               }
+
+            elif tideChange > tideData['HH']['value']:
+              tmp = tideData['HH']
+              #tideData['HH'] = tideChange
+              tideData['HH'] = {
+                                'value' : tideChange,
+                                'date' : tide_change_ts
+                               }
+              tideData['H'] = tmp
+            else:
+              tideData['H'] = {
+                                'value' : tideChange,
+                                'date' : tide_change_ts
+                               }
+
+            #print("Tide Max at: %f@%s" %(tideChange,timeStamp))
+            if self.logger:
+              self.logger.debug("Tide Max at: %f@%s" %(tideChange,tide_change_ts))
+
+            #Found the max tide, so another is not going to occur any quicker than the chord length, so increment the ndx.
+            ndx += chordLen
+            #Slope has changed direction.
+            lastSlope = 0
+            continue
+          lastSlope = 0
+
+          if a < tideChange:
+            tideChange = a
+            tide_change_ts = timeStamp
+
+            changeNdx = ndx
+      #Save off the highest and lowest values.
+      if tideData['PeakValue'] is None or tideData['PeakValue']['value'] < a:
+        tideData['PeakValue'] = {'value': a,
+                                  'date': timeStamp}
+      if tideData['ValleyValue'] is None or tideData['ValleyValue']['value'] > a:
+        tideData['ValleyValue'] = {'value': a,
+                                  'date': timeStamp}
+
+      ndx += 1
+
+  def get_tide_stage(self, begin_date,
+                            end_date,
+                            station,
+                            datum='MLLW',
+                            units='feet',
+                            time_zone='GMT',
+                            write_tide_data=False):
+    tide_data = { 'LL': None,
+    'HH': None,
+    'L': None,
+    'H': None,
+    'PeakValue': None,
+    'ValleyValue': None }
+    tide_stage = -9999
+    try:
+      if self.use_raw:
+        wlData = self.getWaterLevelRawSixMinuteData(begin_date.strftime('%Y%m%d'), end_date.strftime('%Y%m%d'), station, datum, units, time_zone)
+      else:
+        wlData = self.getWaterLevelVerifiedSixMinuteData(begin_date.strftime('%Y%m%d'), end_date.strftime('%Y%m%d'), station, datum, units, time_zone)
+    except (WebFault,Exception) as e:
+      if self.logger:
+        self.logger.exception(e)
+
+    tz_obj = None
+    if time_zone == 'GMT':
+      tz_obj = pytz_timezone('UTC')
+
+    #if begin_time == tz_obj.localize(datetime.strptime('2001-08-27 04:00:00', '%Y-%m-%d %H:%M:%S')):
+    #  i = 0
+    try:
+      start_time_ndx = end_date - timedelta(hours=10)
+      end_time_ndx = end_date + timedelta(hours=10)
+      start_ndx = None
+      end_ndx = None
+      for ndx in range(0, len(wlData.item)):
+        wl_time = tz_obj.localize(datetime.strptime(wlData.item[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
+        if start_ndx is None and wl_time >= start_time_ndx:
+          start_ndx = ndx
+        if end_ndx is None and wl_time > end_time_ndx:
+          end_ndx = ndx-1
+
+      #tide_recs = wlData.item[start_ndx:end_ndx]
+      tide_recs = wlData.item[start_ndx:end_ndx]
+      #self.find_tide_change_points(tide_recs, chordLen, tide_data)
+
+      recs = [tide_recs[ndx]['WL'] for ndx, data in enumerate(tide_recs)]
+      #Get RMS of data
+      #maxtab, mintab = peakdet(recs, 0.08)
+      pda_maxtab, pda_mintab = pda_peakdetect(recs, None, 10, 0, False)
+
+      #zero_maxtab, zero_mintab = peakdetect_zero_crossing(y_axis=recs, x_axis=None, window=13)
+      #Sort the maxs and mins by value then date.
+      #max_sorted = sorted(pda_maxtab, key=lambda rec: (tide_recs[int(rec[0])]['WL'], tide_recs[int(rec[0])]['timeStamp']))
+      #min_sorted = sorted(pda_mintab, key=lambda rec: (tide_recs[int(rec[0])]['WL'], tide_recs[int(rec[0])]['timeStamp']))
+      max_len = len(pda_maxtab) - 1
+      tide_data['HH'] = {
+        'value': tide_recs[int(pda_maxtab[max_len][0])]['WL'],
+        'date':  tide_recs[int(pda_maxtab[max_len][0])]['timeStamp']
+      }
+      if max_len > 0:
+        tide_data['H'] = {
+          'value': tide_recs[int(pda_maxtab[max_len-1][0])]['WL'],
+          'date':  tide_recs[int(pda_maxtab[max_len-1][0])]['timeStamp']
+        }
+      max_len = len(pda_mintab) - 1
+      tide_data['LL'] = {
+        'value': tide_recs[int(pda_mintab[max_len][0])]['WL'],
+        'date':  tide_recs[int(pda_mintab[max_len][0])]['timeStamp']
+      }
+      if max_len > 0:
+        tide_data['L'] = {
+          'value': tide_recs[int(pda_mintab[max_len-1][0])]['WL'],
+          'date':  tide_recs[int(pda_mintab[max_len-1][0])]['timeStamp']
+        }
+      tide_levels = ['H','HH', 'L', 'LL']
+      tide_changes = [tide_data[tide_level] for tide_level in tide_levels if tide_level in tide_data and tide_data[tide_level] is not None]
+      tide_changes = sorted(tide_changes, key=lambda k: k['date'])
+
+      #0 is Full stage, either Ebb or Flood, 100 is 1/4, 200 is 1/2 and 300 is 3/4. Below we add either
+      #the 2000 for flood or 4000 for ebb.
+      tide_stages = [0, 100, 200, 300]
+      prev_tide_data_rec = None
+      tolerance = timedelta(hours = 1)
+      for tide_sample in tide_changes:
+        if prev_tide_data_rec is not None:
+          prev_date_time = tz_obj.localize(datetime.strptime(prev_tide_data_rec['date'], '%Y-%m-%d %H:%M:%S.0'))
+          cur_date_time = tz_obj.localize(datetime.strptime(tide_sample['date'], '%Y-%m-%d %H:%M:%S.0'))
+          if (end_date >= prev_date_time - tolerance or end_date >= prev_date_time + tolerance)\
+            and (end_date < cur_date_time - tolerance or end_date < cur_date_time + tolerance):
+            prev_level = prev_tide_data_rec['value']
+            cur_level = tide_sample['value']
+            if prev_level < cur_level:
+              tide_state = 2000
+            else:
+              tide_state = 4000
+
+            #Now figure out if it is 0, 1/4, 1/2, 3/4 stage. We divide the time between the 2 tide changes
+            #up into 4 pieces, then figure out where our query time falls.
+            time_delta = cur_date_time - prev_date_time
+            qtr_time = time_delta.total_seconds() / 4.0
+            prev_time = prev_date_time
+            for i in range(0, 4):
+              if end_date >= prev_time and end_date < (prev_time + timedelta(seconds=qtr_time)):
+                 tide_stage = tide_state + tide_stages[i]
+                 break
+
+              prev_time = prev_time + timedelta(seconds=qtr_time)
+
+        if tide_stage != -9999:
+          break
+        prev_tide_data_rec = tide_sample
+
+
+    except Exception, e:
+      if self.logger:
+        self.logger.exception(e)
+    if write_tide_data:
+      with open('/Users/danramage/tmp/florida_data/tide_stage_data/%s.csv' % (end_date.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
+        for rec in tide_recs:
+          tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
+
+    return tide_stage
+
+
 if __name__ == '__main__':
   tide = noaaTideData()
   tide.calcTideRange(beginDate = '20110613',

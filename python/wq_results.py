@@ -1,6 +1,32 @@
 import logging.config
 import ConfigParser
+"""
+This is based on the Python logging configuration. It's not a 100% duplication yet.
+The idea is to use a configuration similar to the logging where various output handlers
+can be used.
+AN example configuration:
 
+[output]
+handlers=results_email,results_email_user,results_json,results_csv
+
+[handler_results_email]
+class=florida_wq_output.email_wq_results
+#Params
+args=(Mail server, From Address, To List, Subject Line, User name, password tuple, report template, report output filename, report file base url, logging flag)
+
+[handler_results_json]
+class=florida_wq_output.json_wq_results
+#Params
+#Output file name for json data, logging flag
+args=('Predictions.json', True)
+
+[handler_results_csv]
+class=florida_wq_output.csv_wq_results
+#Params
+#Output file name for json data, logging flag
+args=('Predictions.csv', True)
+
+"""
 
 def _resolve(name):
     """Resolve a dotted name to a global object."""
