@@ -793,7 +793,10 @@ class nexrad_db(object):
     self.db_connection.commit()
     cursor.close()
     sql = "VACUUM;"
-    cursor = self.db_connection.execute(sql);
+    cursor = self.db_connection.cursor()
+    cursor.executescript(sql)
+    self.db_connection.commit()
+    #cursor = self.db_connection.execute(sql);
     cursor.close()
 
   def close(self):
