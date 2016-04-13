@@ -38,7 +38,7 @@ class stats(object):
   def addValue(self, value):
     self.items.append(value)
 
-  def geometric_mean(self, values):
+  def calc_geometric_mean(self, values):
     return (reduce(operator.mul, values)) ** (1.0/len(values))
 
   def getValueAtPercentile(self, percentile,linearInterpolate=False):
@@ -84,7 +84,7 @@ class stats(object):
       self.maxVal = max(self.items)
       self.minVal = min(self.items)
       self.average = sum(self.items) / item_count
-      self.geometric_mean = self.geometric_mean(self.items)
+      self.geometric_mean = self.calc_geometric_mean(self.items)
 
       if item_count % 2 == 0:
         ndx_lo = int(item_count / 2) - 1
