@@ -1,6 +1,7 @@
 
 import sys
 import math
+import operator
 
 class statsException(Exception):
   def __init__(self,value):
@@ -18,7 +19,8 @@ class stats(object):
     self.maxVal = None
     self.minVal = None
     self.median = None
-  
+    self.geometric_mean = None
+
   def clearArray(self):
     del(self.items[:])
     
@@ -31,9 +33,13 @@ class stats(object):
     self.maxVal = None
     self.minVal = None
     self.median = None
+    self.geometric_mean = None
 
   def addValue(self, value):
     self.items.append(value)
+
+  def geometric_mean(self, values):
+    return (reduce(operator.mul, values)) ** (1.0/len(values))
 
   def getValueAtPercentile(self, percentile,linearInterpolate=False):
     value = None
@@ -78,6 +84,8 @@ class stats(object):
       self.maxVal = max(self.items)
       self.minVal = min(self.items)
       self.average = sum(self.items) / item_count
+      self.geometric_mean = self.geometric_mean(self.items)
+
       if item_count % 2 == 0:
         ndx_lo = int(item_count / 2) - 1
         self.median = (self.items[ndx_lo] + self.items[ndx_lo+1]) / 2.0
