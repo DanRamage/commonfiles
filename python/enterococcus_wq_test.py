@@ -13,14 +13,46 @@ from wqHistoricalData import wq_defines
 from wq_prediction_tests import predictionTest, predictionLevels
 import time
 
+class TEST_FUNC(Function):
+  nargs = 4
+
+  def _eval_evalf(self, nprec):
+      obs_symbol, a, b, c= symbols('obs_symbol a b c')
+      test_func = a + b * obs_symbol + c * obs_symbol**2
+      result = test_func.evalf(subs={obs_symbol: symFloat(self.args[0]), a: symFloat(self.args[1]), b: symFloat(self.args[2]), c: symFloat(self.args[3])})
+      return result
 class VB_POLY(Function):
   nargs = (1, 4)
 
+  @classmethod
+  def _should_evalf(cls, arg):
+    if arg.is_zero:
+      return arg._prec
+    else:
+      if arg.is_Float:
+          return arg._prec
+      if not arg.is_Add:
+          return -1
+      re, im = arg.as_real_imag()
+      l = [a._prec for a in [re, im] if a.is_Float]
+      l.append(-1)
+      return max(l)
+  """
+  @classmethod
+  def eval(cls, obs_val, a, b, c):
+    if cls._should_evalf(obs_val) != -1:
+      result = poly(a + b * obs_val + c * obs_val**2)
+    return None
+  """
   def _eval_evalf(self, nprec):
+    #bs_val = 0
     obs_symbol,a,b,c = symbols('obs_symbol a b c')
     poly_func = poly(a + b * obs_symbol + c * obs_symbol**2)
-    #poly_func.subs({obs_symbol: symFloat(self.args[0]), a: symFloat(self.args[1]), b: symFloat(self.args[2]), c: symFloat(self.args[3])})
+    #if self.args[0] != 0:
+    #  obs_val = symFloat(self.args[0])
     result = poly_func.evalf(subs={obs_symbol: symFloat(self.args[0]), a: symFloat(self.args[1]), b: symFloat(self.args[2]), c: symFloat(self.args[3])})
+    #If the obs value is 0, then no need to calc the polynomial, the value is going
+    #to be the value of "a" since "b" and "c" are zeroed out.
     return result
 
 class VB_SQUARE(Function):
@@ -90,6 +122,22 @@ class VB_LOG10(Function):
   def _eval_evalf(self, nprec):
     obs = symbols('obs_symbol')
     vb_func = log(obs, 10)
+    result = vb_func.evalf(subs={obs: symFloat(self.args[0])})
+    return result
+
+class VB_POWER(Function):
+  nargs = 2
+  def _eval_evalf(self, nprec):
+    obs = symbols('obs_symbol')
+    vb_func = Pow(self.args[0], obs)
+    result = vb_func.evalf(subs={obs: symFloat(self.args[1])})
+    return result
+
+class VB_POWER10(Function):
+  nargs = 1
+  def _eval_evalf(self, nprec):
+    obs = symbols('obs_symbol')
+    vb_func = Pow(10, obs)
     result = vb_func.evalf(subs={obs: symFloat(self.args[0])})
     return result
 
@@ -228,3 +276,62 @@ class EnterococcusPredictionTest(predictionTest):
     }
     return(results)
 
+
+class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
+  """
+  Function: runTest
+  Purpose: Uses the data parameter to do the string substitutions then evaluate the formula.
+    Prediction is a log10 formula.
+  Parameters:
+    data - a dictionary with the appropriate keys to do the string subs.
+  Return:
+    The result of evaluating the formula.
+  """
+  def runTest(self, data):
+
+    if self.logger:
+      self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self.model_name, self.formula))
+
+    start_time = time.time()
+    try:
+      #Get the variables from the formula, then verify the passed in data has the observation and a valid value.      valid_data = True
+      valid_data = True
+      sym_expr = sympify(self.formula, globals())
+
+      observation_variables = sym_expr.free_symbols
+      mlr_symbols = {}
+      for obs_var in observation_variables:
+        self.data_used[obs_var.name] = None
+        if obs_var.name in data:
+          self.data_used[obs_var.name] = data[obs_var.name]
+          if data[obs_var.name] != 0:
+            mlr_symbols[obs_var] = symFloat(data[obs_var.name])
+          else:
+            mlr_symbols[obs_var] = int(data[obs_var.name])
+          if data[obs_var.name] == wq_defines.NO_DATA:
+            valid_data = False
+        else:
+          valid_data = False
+      if valid_data:
+        try:
+          self.mlrResult = sym_expr.evalf(subs=mlr_symbols)
+          if self.logger:
+            self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.mlrResult, self.data_used))
+          self.categorize_result()
+        except (TypeError, OverflowError) as e:
+          if self.logger:
+            self.logger.exception(e)
+      else:
+        if self.logger:
+          self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
+    except Exception,e:
+      if self.logger:
+        self.logger.exception(e)
+
+    self.test_time = time.time() - start_time
+    if self.logger:
+      self.logger.debug("Test: %s execute in: %f ms" % (self.model_name, self.test_time * 1000))
+
+      self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
+
+    return self.predictionLevel.value
