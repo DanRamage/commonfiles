@@ -314,7 +314,7 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
           valid_data = False
       if valid_data:
         try:
-          self.mlrResult = sym_expr.evalf(subs=mlr_symbols)
+          self.mlrResult = int(sym_expr.evalf(subs=mlr_symbols, n=4))
           if self.logger:
             self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.mlrResult, self.data_used))
           self.categorize_result()
