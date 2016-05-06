@@ -60,7 +60,7 @@ class VB_SQUARE(Function):
 
   def _eval_evalf(self, nprec):
     obs = symbols('obs_symbol')
-    vb_func = sign(obs) * abs(obs)**2
+    vb_func = sign(obs) * (abs(obs)**2)
     result = vb_func.evalf(subs={obs: symFloat(self.args[0])})
     return result
 
@@ -69,7 +69,7 @@ class VB_QUADROOT(Function):
 
   def _eval_evalf(self, nprec):
     obs = symbols('obs_symbol')
-    vb_func = sign(obs) * abs(obs)**.25
+    vb_func = sign(obs) * (abs(obs)**.25)
     result = vb_func.evalf(subs={obs: symFloat(self.args[0])})
     return result
 
@@ -78,7 +78,7 @@ class VB_SQUAREROOT(Function):
 
   def _eval_evalf(self, nprec):
     obs = symbols('obs_symbol')
-    vb_func = sign(obs) * abs(obs)**.5
+    vb_func = sign(obs) * (abs(obs)**.5)
     result = vb_func.evalf(subs={obs: symFloat(self.args[0])})
     return result
 
@@ -91,7 +91,7 @@ class VB_INVERSE(Function):
       sub_val = symFloat(self.args[0])
     else:
       sub_val = symFloat(self.args[1])
-    vb_func =  sign(obs) * 1 / abs(obs)
+    vb_func =  sign(obs) * (1 / abs(obs))
     result = vb_func.evalf(subs={obs: sub_val})
     return result
 
