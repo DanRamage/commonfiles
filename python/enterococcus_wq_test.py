@@ -125,21 +125,6 @@ class VB_LOG10(Function):
     result = vb_func.evalf(subs={obs: symFloat(self.args[0])})
     return result
 
-class VB_POWER(Function):
-  nargs = 2
-  def _eval_evalf(self, nprec):
-    obs = symbols('obs_symbol')
-    vb_func = Pow(self.args[0], obs)
-    result = vb_func.evalf(subs={obs: symFloat(self.args[1])})
-    return result
-
-class VB_POWER10(Function):
-  nargs = 1
-  def _eval_evalf(self, nprec):
-    obs = symbols('obs_symbol')
-    vb_func = Pow(10, obs)
-    result = vb_func.evalf(subs={obs: symFloat(self.args[0])})
-    return result
 
 """
 def VB_POLY(obs_symbol, a_val, b_val, c_val):
