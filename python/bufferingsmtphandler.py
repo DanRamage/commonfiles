@@ -38,9 +38,11 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)-5s %(message)s"))
 
     def flush(self):
+        print "1\n"
         if len(self.buffer) > 0:
             try:
                 import smtplib
+                print "2\n"
                 port = self.mailport
                 if not port:
                     port = smtplib.SMTP_PORT
@@ -54,5 +56,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
                 smtp.sendmail(self.fromaddr, self.toaddrs, msg)
                 smtp.quit()
             except:
+                print "3\n"
+
                 self.handleError(None)  # no particular record
             self.buffer = []
