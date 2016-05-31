@@ -37,6 +37,18 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         self.password = user_and_password[1]
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)-5s %(message)s"))
 
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Append the record. If shouldFlush() tells us to, call flush() to process
+        the buffer.
+        """
+        print "emit 1\n"
+        self.buffer.append(record)
+        if self.shouldFlush(record):
+            self.flush()
+
     def flush(self):
         print "flush 1 buffer len: %d\n" % (len(self.buffer))
         if len(self.buffer) > 0:
