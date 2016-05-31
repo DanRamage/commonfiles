@@ -24,6 +24,7 @@ of SMTPHandler.
 Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 """
 import string, logging, logging.handlers
+import copy
 
 class BufferingSMTPHandler(logging.Handler):
     def __init__(self, mailhost, fromaddr, toaddrs, subject, user_and_password, capacity):
@@ -59,7 +60,7 @@ class BufferingSMTPHandler(logging.Handler):
         the buffer.
         """
         print "emit 1"
-        self.buffer.append(record)
+        self.buffer.append(copy.deepcopy(record))
         print "emit buffer len: %d" % (len(self.buffer))
         if self.shouldFlush(record):
             self.flush()
