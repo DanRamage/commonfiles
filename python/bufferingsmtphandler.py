@@ -46,6 +46,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         """
         print "emit 1\n"
         self.buffer.append(record)
+        print "emit buffer len: %d\n" % (len(self.buffer))
         if self.shouldFlush(record):
             self.flush()
 
