@@ -27,6 +27,7 @@ import string, logging, logging.handlers
 
 class BufferingSMTPHandler(logging.handlers.BufferingHandler):
     def __init__(self, mailhost, fromaddr, toaddrs, subject, user_and_password, capacity):
+        print "__init__"
         logging.handlers.BufferingHandler.__init__(self, capacity)
         self.mailhost = mailhost
         self.mailport = None
@@ -44,17 +45,17 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         Append the record. If shouldFlush() tells us to, call flush() to process
         the buffer.
         """
-        print "emit 1\n"
+        print "emit 1"
         self.buffer.append(record)
-        print "emit buffer len: %d\n" % (len(self.buffer))
+        print "emit buffer len: %d" % (len(self.buffer))
         if self.shouldFlush(record):
             self.flush()
 
     def flush(self):
-        print "flush 1 buffer len: %d\n" % (len(self.buffer))
+        print "flush 1 buffer len: %d" % (len(self.buffer))
         if len(self.buffer) > 0:
             try:
-                print "flush 2\n"
+                print "flush 2"
                 import smtplib
                 port = self.mailport
                 if not port:
@@ -69,7 +70,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
                 smtp.sendmail(self.fromaddr, self.toaddrs, msg)
                 smtp.quit()
             except:
-                print "flush 3\n"
+                print "flush 3"
 
                 self.handleError(None)  # no particular record
             self.buffer = []
