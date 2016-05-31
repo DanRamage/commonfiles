@@ -26,13 +26,10 @@ Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 import string, logging, logging.handlers
 import copy
 
-class BufferingSMTPHandler(logging.Handler):
+class BufferingSMTPHandler(logging.handlers.BufferingHandler):
     def __init__(self, mailhost, fromaddr, toaddrs, subject, user_and_password, capacity):
-        print "__init__"
-        #logging.handlers.BufferingHandler.__init__(self, capacity)
+        logging.handlers.BufferingHandler.__init__(self, capacity)
         logging.Handler.__init__(self)
-        self.capacity = capacity
-        self.buffer = []
 
         self.mailhost = mailhost
         self.mailport = None
@@ -43,15 +40,6 @@ class BufferingSMTPHandler(logging.Handler):
         self.password = user_and_password[1]
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)-5s %(message)s"))
 
-    def shouldFlush(self, record):
-        """
-        Should the handler flush its buffer?
-
-        Returns true if the buffer is up to capacity. This method can be
-        overridden to implement custom flushing strategies.
-        """
-        return (len(self.buffer) >= self.capacity)
-
     def emit(self, record):
         """
         Emit a record.
@@ -59,17 +47,13 @@ class BufferingSMTPHandler(logging.Handler):
         Append the record. If shouldFlush() tells us to, call flush() to process
         the buffer.
         """
-        print "emit 1"
-        self.buffer.append(str(record))
-        print "emit buffer len: %d" % (len(self.buffer))
+        self.buffer.append(record)
         if self.shouldFlush(record):
             self.flush()
 
     def flush(self):
-        print "flush 1 buffer len: %d" % (len(self.buffer))
         if len(self.buffer) > 0:
             try:
-                print "flush 2"
                 import smtplib
                 port = self.mailport
                 if not port:
@@ -83,20 +67,7 @@ class BufferingSMTPHandler(logging.Handler):
                     msg = msg + s + "\r\n"
                 smtp.sendmail(self.fromaddr, self.toaddrs, msg)
                 smtp.quit()
-            except:
-                print "flush 3"
-
+            except Exception as e:
                 self.handleError(None)  # no particular record
             self.buffer = []
 
-    def close(self):
-        """
-        Close the handler.
-
-        This version just flushes and chains to the parent class' close().
-        """
-        print "close"
-        try:
-            self.flush()
-        finally:
-            logging.Handler.close(self)
