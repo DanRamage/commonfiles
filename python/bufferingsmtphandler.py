@@ -38,7 +38,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)-5s %(message)s"))
 
     def flush(self):
-        print "flush 1\n"
+        print "flush 1 buffer len: %d\n" % (len(self.buffer))
         if len(self.buffer) > 0:
             try:
                 print "flush 2\n"
