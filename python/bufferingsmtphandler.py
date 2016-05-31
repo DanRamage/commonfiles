@@ -25,10 +25,14 @@ Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 """
 import string, logging, logging.handlers
 
-class BufferingSMTPHandler(logging.handlers.BufferingHandler):
+class BufferingSMTPHandler(logging.Handler):
     def __init__(self, mailhost, fromaddr, toaddrs, subject, user_and_password, capacity):
         print "__init__"
-        logging.handlers.BufferingHandler.__init__(self, capacity)
+        #logging.handlers.BufferingHandler.__init__(self, capacity)
+        logging.Handler.__init__(self)
+        self.capacity = capacity
+        self.buffer = []
+
         self.mailhost = mailhost
         self.mailport = None
         self.fromaddr = fromaddr
@@ -37,6 +41,15 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         self.user = user_and_password[0]
         self.password = user_and_password[1]
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)-5s %(message)s"))
+
+    def shouldFlush(self, record):
+        """
+        Should the handler flush its buffer?
+
+        Returns true if the buffer is up to capacity. This method can be
+        overridden to implement custom flushing strategies.
+        """
+        return (len(self.buffer) >= self.capacity)
 
     def emit(self, record):
         """
@@ -74,3 +87,15 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
 
                 self.handleError(None)  # no particular record
             self.buffer = []
+
+    def close(self):
+        """
+        Close the handler.
+
+        This version just flushes and chains to the parent class' close().
+        """
+        print "close"
+        try:
+            self.flush()
+        finally:
+            logging.Handler.close(self)
