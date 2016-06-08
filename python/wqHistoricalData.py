@@ -35,9 +35,7 @@ class station_data(dict):
 """
 class wq_data(object):
   def __init__(self, **kwargs):
-    self.logger = None
-    if 'use_logger' in kwargs:
-      self.logger = logging.getLogger(type(self).__name__)
+    self.logger = logging.getLogger(type(self).__name__)
     self.station_dataset = None
 
   """

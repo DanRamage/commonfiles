@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, DateTime, Float, Boolean, func
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, DateTime, Float, Boolean, func, Text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import eagerload
@@ -58,7 +58,12 @@ class web_services_tracking(Base):
   recs             = Column(Integer)
   id               = Column(Integer, primary_key=True)
 
-
+class mobile_web_services_tracking(Base):
+  __tablename__ = 'mobileTracking'
+  id               = Column(Integer, primary_key=True)
+  stationCode      = Column(String(50))
+  DateTimeStamp    = Column(DateTime)
+  osInfo           = Column(Text())
 
 
 

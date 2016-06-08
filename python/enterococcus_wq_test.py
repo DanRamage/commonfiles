@@ -24,6 +24,7 @@ class TEST_FUNC(Function):
 class VB_POLY(Function):
   nargs = (1, 4)
 
+  """
   @classmethod
   def _should_evalf(cls, arg):
     if arg.is_zero:
@@ -37,6 +38,7 @@ class VB_POLY(Function):
       l = [a._prec for a in [re, im] if a.is_Float]
       l.append(-1)
       return max(l)
+  """
   """
   @classmethod
   def eval(cls, obs_val, a, b, c):
@@ -300,7 +302,7 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
       if valid_data:
         try:
           self.mlrResult = sym_expr.evalf(subs=mlr_symbols, n=4)
-          self.mlrResult = int(self.mlrResult)
+          self.mlrResult = int(self.mlrResult + 0.5)
           if self.logger:
             self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.mlrResult, self.data_used))
           self.categorize_result()

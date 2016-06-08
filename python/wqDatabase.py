@@ -385,3 +385,34 @@ class wqDB(xeniaSQLite):
 
 
     return missing_list
+
+
+  def buildMinimalPlatform(self, platform_name, observation_list):
+    name_parts = platform_name.split('.')
+    org_id = self.organizationExists(name_parts[0])
+    if org_id == -1:
+      if self.logger:
+        self.logger.debug("Adding organization name: %s" % (name_parts[0]))
+      org_id =  self.addOrganization({'short_name': name_parts[0]})
+
+    if self.platformExists(platform_name) == -1:
+      if self.logger:
+        self.logger.debug("Adding platform handle: %s" % (platform_name))
+      self.addPlatform({'organization_id': org_id,
+                                    'platform_handle': platform_name,
+                                    'short_name': name_parts[1],
+                                    'active': 1})
+
+    for obs_info in observation_list:
+
+      if self.logger:
+        self.logger.debug("Platform: %s adding sensor: %s(%s)" % (platform_name, obs_info['obs_name'], obs_info['uom_name']))
+      if self.addSensor(obs_info['obs_name'], obs_info['uom_name'],
+                              platform_name,
+                              1,
+                              0,
+                              obs_info['s_order'],
+                              None,
+                              True) == -1:
+        if self.logger:
+          self.logger.error("Error platform: %s sensor: %s(%s) not added" % (platform_name, obs_info['obs_name'], obs_info['uom_name']))
