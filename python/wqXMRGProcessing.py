@@ -988,6 +988,7 @@ def main():
 
     logger = None
     logConfFile = configFile.get('logging', 'xmrg_ingest')
+    print logConfFile
     logger_name = configFile.get('logging', 'xmrg_ingest_logger_name')
     if(logConfFile):
       logging.config.fileConfig(logConfFile)
