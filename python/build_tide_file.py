@@ -52,14 +52,13 @@ def get_tide_data(**kwargs):
         for x in range(0, 5):
           if logger:
             logger.debug("%s Attempt: %d retrieving tide data for station." % (current_process().name, x+1))
-          tide_data,pda_tide_data = tide.calcTideRangeExt(beginDate = tide_start_time,
+          pda_tide_data = tide.calcTideRangePeakDetect(beginDate = tide_start_time,
                              endDate = tide_end_time,
                              station=tide_station,
                              datum='MLLW',
                              units='feet',
                              timezone='GMT',
-                             smoothData=False,
-                            write_tide_data=True)
+                             smoothData=False)
 
           '''
           tide_stage = tide.get_tide_stage(begin_date = tide_start_time,
@@ -71,9 +70,9 @@ def get_tide_data(**kwargs):
                              write_tide_data=True)
           '''
 
-          if tide_data is not None:
-            tide_data['date'] = wq_utc_date
-            resultsQueue.put((tide_data, pda_tide_data))
+          if pda_tide_data is not None:
+            pda_tide_data['date'] = wq_utc_date
+            resultsQueue.put(pda_tide_data)
             successful = True
             break
         if not successful:
@@ -183,30 +182,40 @@ def create_tide_data_file_mp(tide_station,
     if logger:
       logger.debug("Retrieved: %d tide records" % (rec_count))
 
-    tide_recs.sort(key=lambda rec: rec[0]['date'], reverse=False)
+    tide_recs.sort(key=lambda rec: rec['date'], reverse=False)
 
+    """
     tide_debug_file = None
     if write_debug_file:
       full_path, full_filename = os.path.split(output_file)
       filename, ext = os.path.splitext(full_filename)
       debug_file_name = os.path.join(full_path, "%s-tide_debug.csv" % (filename))
       tide_debug_file = open(debug_file_name, "w")
-      tide_debug_file.write("Date,Orig HH,Orig HH Date,PD HH,PD HH Date,Orig H,Orig H Date,PD H,PD H Date,Orig LL,Orig LL Date,PD LL,PD LL Date,Orig L,Orig L Date,PD L,PD L Date\n")
+      tide_debug_file.write("Date,Orig Range,PD Range,Orig HH,Orig HH Date,PD HH,PD HH Date,Orig H,Orig H Date,PD H,PD H Date,Orig LL,Orig LL Date,PD LL,PD LL Date,Orig L,Orig L Date,PD L,PD L Date\n")
+    """
     with open(output_file, "w") as tide_csv_file:
-      tide_csv_file.write("Station,Date,Range,Hi,Lo\n")
-      for tide_data,pda_tide_data in tide_recs:
+      tide_csv_file.write("Station,Date,Range,HH,HH Date,LL,LL Date\n")
+      for tide_data in tide_recs:
+        tide_range = ""
+        tide_hi = ""
+        tide_lo = ""
+        hi_date = ""
+        lo_date = ""
         if tide_data and tide_data['HH'] is not None and tide_data['LL'] is not None:
           try:
             tide_range = tide_data['HH']['value'] - tide_data['LL']['value']
             #Save tide station values.
             tide_hi = tide_data['HH']['value']
+            hi_date = str(tide_data['HH']['date'])
             tide_lo = tide_data['LL']['value']
+            lo_date = str(tide_data['LL']['date'])
           except TypeError, e:
             if logger:
               logger.exception(e)
         else:
           if logger:
             logger.error("Tide data for station: %s date: %s not available or only partial, using Peak data." % (tide_station, tide_data['date'].strftime("%Y-%m-%dT%H:%M:%S")))
+          """
           try:
             if tide_data['PeakValue'] is not None and tide_data['ValleyValue'] is not None:
               tide_hi = tide_data['PeakValue']['value']
@@ -218,11 +227,19 @@ def create_tide_data_file_mp(tide_station,
           except TypeError, e:
             if logger:
               logger.exception(e)
-
-        if tide_range is not None:
-          tide_csv_file.write("%s,%s,%f,%f,%f\n"\
-               % (tide_station,tide_data['date'].strftime("%Y-%m-%dT%H:%M:%S"),tide_range,tide_hi,tide_lo))
-
+          """
+        try:
+          if tide_range is not None:
+            tide_csv_file.write("%s,%s,%s,%s,%s,%s,%s\n"\
+                 % (tide_station,
+                    tide_data['date'].strftime("%Y-%m-%dT%H:%M:%S"),
+                    str(tide_range),
+                    str(tide_hi),hi_date,
+                    str(tide_lo),lo_date))
+        except Exception as e:
+          if logger:
+            logger.exception(e)
+        """
         if tide_debug_file is not None:
           orig_hh = ""
           orig_hh_date = ""
@@ -271,10 +288,13 @@ def create_tide_data_file_mp(tide_station,
           if pda_tide_data['L'] is not None:
             pda_l = str(pda_tide_data['L']['value'])
             pda_l_date = str(pda_tide_data['L']['date'])
-            
 
-          tide_debug_file.write("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n"\
+          if pda_tide_data['HH'] is not None and pda_tide_data['LL'] is not None:
+            pda_range = pda_tide_data['HH']['value'] - pda_tide_data['LL']['value']
+
+          tide_debug_file.write("%s,%f,%f,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n"\
                % (tide_data['date'].strftime("%Y-%m-%dT%H:%M:%S"),
+                  tide_range, pda_range,
                   orig_hh, orig_hh_date,
                   pda_hh, pda_hh_date,
                   orig_h, orig_h_date,
@@ -284,8 +304,9 @@ def create_tide_data_file_mp(tide_station,
                   orig_l, orig_l_date,
                   pda_l, pda_l_date
                   ))
-    if tide_debug_file is not None:
-      tide_debug_file.close()
+        """
+    #if tide_debug_file is not None:
+    #  tide_debug_file.close()
     logger.info("create_tide_data_file_mp finished.")
     logger.info("Shutting down logger process.")
     stop_event.set()
