@@ -363,7 +363,9 @@ def process_xmrg_file(**kwargs):
           if logger:
             logger.exception(e)
 
-
+      else:
+        if logger:
+          logger.error("Process: %s Failed to process file: %s" % (current_process().name, xmrg_filename))
 
     if nexrad_db_conn:
       nexrad_db_conn.close()
