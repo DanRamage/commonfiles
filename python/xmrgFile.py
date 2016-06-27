@@ -124,12 +124,19 @@ class xmrgFile:
         self.compressedFilepath = self.fileName
         #SPlit the filename from the extension.
         parts = self.fileName.split('.')
-        self.fileName = parts[0] 
-        self.xmrgFile = open( self.fileName, mode = 'wb' )
-        zipFile = gzip.GzipFile( filePath, 'rb' )
-        contents = zipFile.read()
-        self.xmrgFile.writelines(contents)
-        self.xmrgFile.close()
+        try:
+          zipFile = gzip.GzipFile( filePath, 'rb' )
+          contents = zipFile.read()
+        except IOError as e:
+          if self.logger:
+            self.logger.error("Does not appear to be valid gzip file. Attempting normal open.")
+            self.logger.exception(e)
+        else:
+          self.fileName = parts[0]
+          self.xmrgFile = open( self.fileName, mode = 'wb' )
+          self.xmrgFile.writelines(contents)
+          self.xmrgFile.close()
+
 
       self.xmrgFile = open( self.fileName, mode = 'rb' )
       retVal = True
@@ -142,7 +149,7 @@ class xmrgFile:
         print(self.lastErrorMsg) 
    
     return(retVal)
-  
+
   """
  Function: cleanUp
  Purpose: Called to delete the XMRG file that was just worked with. Can delete the uncompressed file and/or 
