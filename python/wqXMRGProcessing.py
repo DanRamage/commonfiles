@@ -507,6 +507,9 @@ class wqXMRGProcessing(object):
           #platform_handle = 'nws.%s.radarcoverage' % (boundary['name'])
           platform_handle = 'nws.%s.radarcoverage' % (boundary.name)
           if self.xenia_db.platformExists(platform_handle) == -1:
+            if self.logger:
+              self.logger.debug("Adding platform. Org: %d Platform Handle: %s Short_Name: %s"\
+                                % (org_id, platform_handle, boundary.name))
             if self.xenia_db.addPlatform({'organization_id': org_id,
                                           'platform_handle': platform_handle,
                                           'short_name': boundary.name, #'short_name': boundary['name'],
