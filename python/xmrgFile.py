@@ -765,7 +765,8 @@ class nexrad_db(object):
 
     #Get the schema files that make up the database.
     for schema_file in kwargs['nexrad_schema_files']:
-      full_path = "%s%s" % (kwargs['nexrad_schema_directory'], schema_file)
+      #full_path = "%s%s" % (kwargs['nexrad_schema_directory'], schema_file)
+      full_path = os.path.join(kwargs['nexrad_schema_directory'], schema_file)
       with open(full_path, 'rt') as f:
         schema = f.read()
         self.db_connection.executescript(schema)
