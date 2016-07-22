@@ -994,6 +994,8 @@ class noaaTideDataExt(noaaTideData):
               'value': data_start_tag[int(mins[max_len-1][0])]['WL'],
               'date':  data_start_tag[int(mins[max_len-1][0])]['timeStamp']
             }
+        tide_stage = self.calc_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, True)
+        pda_tide_data['tide_stage'] = tide_stage
       except Exception as e:
         if self.logger:
           self.logger.exception(e)
@@ -1001,6 +1003,114 @@ class noaaTideDataExt(noaaTideData):
     return pda_tide_data
 
 
+  def calc_tide_stage(self,
+                      wlData,
+                      begin_date,
+                      end_date,
+                      tz_obj,
+                      hours_buffer,
+                      write_tide_stage_debug=False):
+    try:
+      tide_stage = -9999
+      tide_data = { 'LL': None,
+      'HH': None,
+      'L': None,
+      'H': None,
+      }
+
+      start_time_ndx = end_date - timedelta(hours=hours_buffer)
+      end_time_ndx = end_date + timedelta(hours=hours_buffer)
+      start_ndx = None
+      end_ndx = None
+
+
+      #It's seemingly impossible to use object notation to navigate to the data.
+      data_start_tag = wlData.Body.getchildren()[0].getchildren()[0].item
+      dataLen = len(data_start_tag)
+      #Get the previous 24 hours of data we are interested in.
+      for ndx in range(0, dataLen):
+        wl_time = tz_obj.localize(datetime.strptime(data_start_tag[ndx]['timeStamp'].text, '%Y-%m-%d %H:%M:%S.0'))
+        if start_ndx is None and wl_time >= start_time_ndx:
+          start_ndx = ndx
+        if end_ndx is None and wl_time > end_time_ndx:
+          end_ndx = ndx-1
+
+      tide_recs = data_start_tag[start_ndx:end_ndx]
+      recs = [tide_recs[ndx]['WL'] for ndx, data in enumerate(tide_recs)]
+      pda_maxtab, pda_mintab = pda_peakdetect(recs, None, 10, 0, False)
+
+      max_len = len(pda_maxtab) - 1
+      tide_data['HH'] = {
+        'value': tide_recs[int(pda_maxtab[max_len][0])]['WL'],
+        'date':  tide_recs[int(pda_maxtab[max_len][0])]['timeStamp']
+      }
+      if max_len > 0:
+        tide_data['H'] = {
+          'value': tide_recs[int(pda_maxtab[max_len-1][0])]['WL'],
+          'date':  tide_recs[int(pda_maxtab[max_len-1][0])]['timeStamp']
+        }
+      max_len = len(pda_mintab) - 1
+      tide_data['LL'] = {
+        'value': tide_recs[int(pda_mintab[max_len][0])]['WL'],
+        'date':  tide_recs[int(pda_mintab[max_len][0])]['timeStamp']
+      }
+      if max_len > 0:
+        tide_data['L'] = {
+          'value': tide_recs[int(pda_mintab[max_len-1][0])]['WL'],
+          'date':  tide_recs[int(pda_mintab[max_len-1][0])]['timeStamp']
+        }
+      tide_levels = ['H','HH', 'L', 'LL']
+      tide_changes = [tide_data[tide_level] for tide_level in tide_levels if tide_level in tide_data and tide_data[tide_level] is not None]
+      tide_changes = sorted(tide_changes, key=lambda k: k['date'])
+
+      #0 is Full stage, either Ebb or Flood, 100 is 1/4, 200 is 1/2 and 300 is 3/4. Below we add either
+      #the 2000 for flood or 4000 for ebb.
+      tide_stages = [0, 100, 200, 300]
+      prev_tide_data_rec = None
+      tolerance = timedelta(hours = 1)
+      for tide_sample in tide_changes:
+        if prev_tide_data_rec is not None:
+          prev_date_time = tz_obj.localize(datetime.strptime(str(prev_tide_data_rec['date']), '%Y-%m-%d %H:%M:%S.0'))
+          cur_date_time = tz_obj.localize(datetime.strptime(str(tide_sample['date']), '%Y-%m-%d %H:%M:%S.0'))
+          if (end_date >= prev_date_time - tolerance or end_date >= prev_date_time + tolerance)\
+            and (end_date < cur_date_time - tolerance or end_date < cur_date_time + tolerance):
+            prev_level = float(prev_tide_data_rec['value'])
+            cur_level = float(tide_sample['value'])
+            if prev_level < cur_level:
+              tide_state = 2000
+            else:
+              tide_state = 4000
+
+            #Now figure out if it is 0, 1/4, 1/2, 3/4 stage. We divide the time between the 2 tide changes
+            #up into 4 pieces, then figure out where our query time falls.
+            time_delta = cur_date_time - prev_date_time
+            qtr_time = time_delta.total_seconds() / 4.0
+            prev_time = prev_date_time
+            for i in range(0, 4):
+              if end_date >= prev_time and end_date < (prev_time + timedelta(seconds=qtr_time)):
+                 tide_stage = tide_state + tide_stages[i]
+                 break
+
+              prev_time = prev_time + timedelta(seconds=qtr_time)
+
+        if tide_stage != -9999:
+          break
+        prev_tide_data_rec = tide_sample
+    except Exception as e:
+      if self.logger:
+        self.logger.exception(e)
+
+    if write_tide_stage_debug:
+      try:
+        with open('/Users/danramage/tmp/tide_stage/%s.csv' % (end_date.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
+          for rec in tide_recs:
+            tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
+
+      except IOError as e:
+        if self.logger:
+          self.logger.exception(e)
+
+    return tide_stage
 
   def get_tide_stage(self, begin_date,
                             end_date,

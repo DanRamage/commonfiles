@@ -8,6 +8,8 @@ import time
 from multiprocessing import Process, Queue, current_process, Event
 from multi_proc_logging import listener_process
 
+
+
 def get_tide_data(**kwargs):
   try:
     processing_start_time = time.time()
@@ -194,13 +196,14 @@ def create_tide_data_file_mp(tide_station,
       tide_debug_file.write("Date,Orig Range,PD Range,Orig HH,Orig HH Date,PD HH,PD HH Date,Orig H,Orig H Date,PD H,PD H Date,Orig LL,Orig LL Date,PD LL,PD LL Date,Orig L,Orig L Date,PD L,PD L Date\n")
     """
     with open(output_file, "w") as tide_csv_file:
-      tide_csv_file.write("Station,Date,Range,HH,HH Date,LL,LL Date\n")
+      tide_csv_file.write("Station,Date,Range,HH,HH Date,LL,LL Date,Tide Stage\n")
       for tide_data in tide_recs:
         tide_range = ""
         tide_hi = ""
         tide_lo = ""
         hi_date = ""
         lo_date = ""
+        tide_stage=""
         if tide_data and tide_data['HH'] is not None and tide_data['LL'] is not None:
           try:
             tide_range = tide_data['HH']['value'] - tide_data['LL']['value']
@@ -209,6 +212,8 @@ def create_tide_data_file_mp(tide_station,
             hi_date = str(tide_data['HH']['date'])
             tide_lo = tide_data['LL']['value']
             lo_date = str(tide_data['LL']['date'])
+            if tide_data['tide_stage'] != -9999:
+              tide_stage = tide_data['tide_stage']
           except TypeError, e:
             if logger:
               logger.exception(e)
@@ -230,12 +235,13 @@ def create_tide_data_file_mp(tide_station,
           """
         try:
           if tide_range is not None:
-            tide_csv_file.write("%s,%s,%s,%s,%s,%s,%s\n"\
+            tide_csv_file.write("%s,%s,%s,%s,%s,%s,%s,%s\n"\
                  % (tide_station,
                     tide_data['date'].strftime("%Y-%m-%dT%H:%M:%S"),
                     str(tide_range),
                     str(tide_hi),hi_date,
-                    str(tide_lo),lo_date))
+                    str(tide_lo),lo_date,
+                    tide_stage))
         except Exception as e:
           if logger:
             logger.exception(e)
