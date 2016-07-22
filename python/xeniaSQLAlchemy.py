@@ -330,7 +330,7 @@ class xeniaAlchemy(object):
         connectionString = "%s://%s:%s@%s/%s" %(databaseType, dbUser, dbPwd, dbHost, dbName)
       else:
         connectionString = "%s://%s:%s@/%s" %(databaseType, dbUser, dbPwd, dbName)
-         
+
       self.dbEngine = create_engine(connectionString, echo=printSQL)
       
       #metadata object is used to keep information such as datatypes for our table's columns.
