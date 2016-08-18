@@ -1,6 +1,6 @@
 import sys
-sys.path.append('../commonfiles/python')
-from wq_results import wq_results
+sys.path.append('../../commonfiles/python')
+
 from mako.template import Template
 from mako import exceptions as makoExceptions
 from smtp_utils import smtpClass
