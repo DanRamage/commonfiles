@@ -11,9 +11,14 @@ class json_output_plugin(output_plugin):
     self.logger = logging.getLogger(__name__)
 
   def initialize_plugin(self, **kwargs):
-    details = kwargs['details']
+    try:
+      details = kwargs['details']
 
-    self.json_outfile = details.get("Settings", "json_outfile")
+      self.json_outfile = details.get("Settings", "json_outfile")
+      return True
+    except Exception as e:
+      self.logger.exception(e)
+    return False
 
   def emit(self, **kwargs):
     if self.logger:

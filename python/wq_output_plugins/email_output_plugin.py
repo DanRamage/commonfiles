@@ -15,17 +15,22 @@ class email_output_plugin(output_plugin):
 
 
   def initialize_plugin(self, **kwargs):
-    details = kwargs['details']
-    self.mailhost = details.get("Settings", "mailhost")
-    self.mailport = None
-    self.fromaddr = details.get("Settings", "fromaddr")
-    self.toaddrs = details.get("Settings", "toaddrs").split(',')
-    self.subject = details.get("Settings", "subject")
-    self.user = details.get("Settings", "user")
-    self.password = details.get("Settings", "password")
-    self.result_outfile = details.get("Settings", "results_outfile")
-    self.results_template = details.get("Settings", "results_template")
-    self.report_url = details.get("Settings", "report_url")
+    try:
+      details = kwargs['details']
+      self.mailhost = details.get("Settings", "mailhost")
+      self.mailport = None
+      self.fromaddr = details.get("Settings", "fromaddr")
+      self.toaddrs = details.get("Settings", "toaddrs").split(',')
+      self.subject = details.get("Settings", "subject")
+      self.user = details.get("Settings", "user")
+      self.password = details.get("Settings", "password")
+      self.result_outfile = details.get("Settings", "results_outfile")
+      self.results_template = details.get("Settings", "results_template")
+      self.report_url = details.get("Settings", "report_url")
+      return True
+    except Exception as e:
+      self.logger.exception(e)
+    return False
 
   def emit(self, **kwargs):
     if self.logger:
