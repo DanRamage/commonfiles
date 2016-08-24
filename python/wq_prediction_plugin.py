@@ -10,7 +10,7 @@ class wq_prediction_engine_plugin(IPlugin, Process):
     self.logger = None
     #self.logger = logging.getLogger(type(self).__name__)
 
-  def inititalize_plugin(self, **kwargs):
+  def initialize_plugin(self, **kwargs):
     raise NotImplementedError("Function must be implemented by child.")
 
   def run_wq_models(self, **kwargs):
