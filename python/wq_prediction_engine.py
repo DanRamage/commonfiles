@@ -3,24 +3,60 @@ import sys
 import logging.config
 from yapsy.PluginManager import PluginManager
 from output_plugin import output_plugin
-from datetime import datetime
 from pytz import timezone
 import time
+from data_collector_plugin import data_collector_plugin
+import ConfigParser
 
 class wq_prediction_engine(object):
   def __init__(self):
     self.logger = logging.getLogger(__name__)
 
   def initialize_engine(self, **kwargs):
-    raise "Child class must instantiate"
+    raise "Must be implemented by child class"
 
   def build_test_objects(self, **kwargs):
-    raise "Child class must instantiate"
+    raise "Must be implemented by child class"
+
+  def prepare_data(self, **kargs):
+    raise "Must be implemented by child class"
 
   def run_wq_models(self, **kwargs):
-    raise "Child class must instantiate"
+    raise "Must be implemented by child class"
 
-  def run_output_plugins(self, **kwargs):
+  def collect_data(self, **kwargs):
+    self.logger.info("Begin collect_data")
+
+    simplePluginManager = PluginManager()
+    logging.getLogger('yapsy').setLevel(logging.DEBUG)
+    simplePluginManager.setCategoriesFilter({
+       "DataCollector": data_collector_plugin
+       })
+
+    # Tell it the default place(s) where to find plugins
+    self.logger.debug("Plugin directories: %s" % (kwargs['data_collector_plugin_directories']))
+    simplePluginManager.setPluginPlaces(kwargs['data_collector_plugin_directories'])
+
+    simplePluginManager.collectPlugins()
+
+    plugin_cnt = 0
+    plugin_start_time = time.time()
+    for plugin in simplePluginManager.getAllPlugins():
+      self.logger.info("Starting plugin: %s" % (plugin.name))
+      if plugin.plugin_object.initialize_plugin(details=plugin.details):
+        plugin.plugin_object.start()
+      else:
+        self.logger.error("Failed to initialize plugin: %s" % (plugin.name))
+      plugin_cnt += 1
+
+    #Wait for the plugings to finish up.
+    self.logger.info("Waiting for %d plugins to complete." % (plugin_cnt))
+    for plugin in simplePluginManager.getAllPlugins():
+      plugin.plugin_object.join()
+    self.logger.info("%d Plugins completed in %f seconds" % (plugin_cnt, time.time() - plugin_start_time))
+
+
+  def output_results(self, **kwargs):
 
     self.logger.info("Begin run_output_plugins")
 
@@ -48,4 +84,4 @@ class wq_prediction_engine(object):
       else:
         self.logger.error("Failed to initialize plugin: %s" % (plugin.details))
     self.logger.debug("%d output plugins run in %f seconds" % (plugin_cnt, time.time() - plugin_start_time))
-    self.logger.info("Finished run_output_plugins")
+    self.logger.info("Finished collect_data")
