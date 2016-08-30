@@ -311,7 +311,7 @@ def process_xmrg_file(**kwargs):
             except Exception,e:
               if logger:
                 logger.exception(e)
-                nexrad_db.db_connection.rollback()
+              nexrad_db.db_connection.rollback()
             else:
               if logger is not None:
                 logger.info("ID: %s(%f secs add %f secs commit) Processed: %d rows. Added: %d records to database."\
@@ -420,13 +420,13 @@ class wqXMRGProcessing(object):
         self.maxLL.longitude = float( latlon[1] )
 
       #Delete data that is older than the LastNDays
-      self.xmrgKeepLastNDays = configFile.getint('nexrad_database', 'keepLastNDays')
+      #self.xmrgKeepLastNDays = configFile.getint('nexrad_database', 'keepLastNDays')
 
       #Try to fill in any holes in the data going back N days.
-      self.backfillLastNDays = configFile.getint('nexrad_database', 'backfillLastNDays')
+      #self.backfillLastNDays = configFile.getint('nexrad_database', 'backfillLastNDays')
 
       #Flag to specify whether or not to write the precip data to the database.
-      self.writePrecipToDB = configFile.getboolean('nexrad_database', 'writeToDB')
+      #self.writePrecipToDB = configFile.getboolean('nexrad_database', 'writeToDB')
 
       self.writePrecipToKML = configFile.getboolean('nexrad_database', 'writeToKML')
 
@@ -440,7 +440,7 @@ class wqXMRGProcessing(object):
 
       self.saveAllPrecipVals = configFile.getboolean('nexrad_database', 'saveAllPrecipVals')
 
-      self.createPolygonsFromGrid = configFile.getboolean('nexrad_database', 'createPolygonsFromGrid')
+      #self.createPolygonsFromGrid = configFile.getboolean('nexrad_database', 'createPolygonsFromGrid')
 
       #Flag to specify if we want to delete the compressed XMRG file when we are done processing.
       #We might not be working off a compressed source file, so this flag only applies to a compressed file.
@@ -461,7 +461,7 @@ class wqXMRGProcessing(object):
       self.baseURL = configFile.get('nexrad_database', 'baseURL')
       #This tag is used to help further refine the files we process. For instance, hourly xmrg files are prepended
       #with xmrg whereas the 6hr and 24hr files aren't. So we could use this to ignore those.
-      self.fileNameFilter = configFile.get('nexrad_database', 'fileNameFilter')
+      #self.fileNameFilter = configFile.get('nexrad_database', 'fileNameFilter')
       self.xmrgDLDir = configFile.get('nexrad_database', 'downloadDir')
 
       #Directory where the NEXRAD database schema files live.
