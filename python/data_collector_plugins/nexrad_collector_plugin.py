@@ -31,6 +31,7 @@ class nexrad_collector_plugin(data_collector_plugin):
       try:
         logger = logging.getLogger(__name__)
         backfill_hours = config_file.getint('nexrad_database', 'backfill_hours')
+        fill_gaps = config_file.getboolean('nexrad_database', 'fill_gaps')
       except (ConfigParser.Error, Exception) as e:
         traceback.print_exc(e)
       else:
@@ -40,9 +41,13 @@ class nexrad_collector_plugin(data_collector_plugin):
           xmrg_proc.load_config_settings(config_file = self.ini_file)
 
           start_date_time = timezone('US/Eastern').localize(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone(timezone('UTC'))
-          logger.info("Backfill N Hours Start time: %s Prev Hours: %d" % (start_date_time, backfill_hours))
-          file_list = xmrg_proc.download_range(start_date_time, backfill_hours)
-          xmrg_proc.import_files(file_list)
+          if fill_gaps:
+            logger.info("Fill gaps Start time: %s Prev Hours: %d" % (start_date_time, backfill_hours))
+            xmrg_proc.fill_gaps(start_date_time, backfill_hours)
+          else:
+            logger.info("Backfill N Hours Start time: %s Prev Hours: %d" % (start_date_time, backfill_hours))
+            file_list = xmrg_proc.download_range(start_date_time, backfill_hours)
+            xmrg_proc.import_files(file_list)
         except Exception as e:
           logger.exception(e)
     return
