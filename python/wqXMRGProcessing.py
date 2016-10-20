@@ -902,6 +902,12 @@ class wqXMRGProcessing(object):
     return None
   def download_file_list(self, file_list):
     files_downloaded = []
+    if self.sftp:
+      ssh = paramiko.SSHClient()
+      ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+      ssh.connect(self.baseURL, username=self.sftp_user, password=self.sftp_password)
+      ftp = ssh.open_sftp()
+
     for file_name in file_list:
       if not self.sftp:
         dl_filename = self.http_download_file(file_name)
@@ -909,11 +915,6 @@ class wqXMRGProcessing(object):
           files_downloaded.append(dl_filename)
       else:
         try:
-          ssh = paramiko.SSHClient()
-          ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-          ssh.connect(self.baseURL, username=self.sftp_user, password=self.sftp_password)
-          ftp = ssh.open_sftp()
           dl_filename = self.sftp_download_file(file_name=file_name,
                                                 ftp_obj=ftp)
         except Exception as e:
