@@ -917,6 +917,7 @@ class wqXMRGProcessing(object):
         try:
           dl_filename = self.sftp_download_file(file_name=file_name,
                                                 ftp_obj=ftp)
+          files_downloaded.append(dl_filename)
         except Exception as e:
           if self.logger:
             self.logger.exception(e)
