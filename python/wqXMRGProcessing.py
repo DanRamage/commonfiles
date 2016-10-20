@@ -16,6 +16,7 @@ from multiprocessing import Process, Queue, current_process
 from shapely.geometry import Polygon
 from shapely.wkt import loads as wkt_loads
 
+import paramiko
 from pykml.factory import KML_ElementMaker as KML
 from lxml import etree
 from wqDatabase import wqDB
@@ -457,7 +458,6 @@ class wqXMRGProcessing(object):
       self.dbName = configFile.get('database', 'name')
       self.spatiaLiteLib = configFile.get('database', 'spatiaLiteLib')
 
-
       self.baseURL = configFile.get('nexrad_database', 'baseURL')
       #This tag is used to help further refine the files we process. For instance, hourly xmrg files are prepended
       #with xmrg whereas the 6hr and 24hr files aren't. So we could use this to ignore those.
@@ -488,6 +488,33 @@ class wqXMRGProcessing(object):
       if self.logger:
         self.logger.exception(e)
 
+    #Default extension to use for XMRG file when we are building the name
+    self.xmrg_file_ext = '.gz'
+    try:
+      self.xmrg_file_ext = configFile.get('nexrad_database', 'xmrg_file_ext')
+    except (ConfigParser.Error, Exception) as e:
+      if self.logger:
+        self.logger.error("No XMRG file extension given, defaultin to: %s" % (self.xmrg_file_ext))
+        self.logger.exception(e)
+
+    #See if we are getting from sftp site and not a web accessible directory.
+    try:
+
+      self.sftp = False
+      self.sftp_user = None
+      self.sftp_password = None
+      self.sftp = configFile.get('nexrad_database', 'use_sftp')
+      self.sftp_base_directory = configFile.get('nexrad_database', 'sftp_base_directory')
+      if self.sftp:
+        pwd_file = configFile.get('nexrad_database', 'sftp_password_file')
+        pwd_config_file = ConfigParser.RawConfigParser()
+        pwd_config_file.read(pwd_file)
+        self.sftp_user = pwd_config_file.get('nexrad_sftp', 'user')
+        self.sftp_password = pwd_config_file.get('nexrad_sftp', 'password')
+
+    except (ConfigParser.Error, Exception) as e:
+      if self.logger:
+        self.logger.exception(e)
     #Process the boundaries
     try:
       header_row = ["WKT", "NAME"]
@@ -822,9 +849,77 @@ class wqXMRGProcessing(object):
 
   def save_data(self):
     return
+
+  def http_download_file(self, file_name):
+    start_time = time.time()
+    remote_filename_url = os.path.join(self.baseURL, file_name)
+    if self.logger:
+      self.logger.debug("Downloading file: %s" % (remote_filename_url))
+    try:
+      r = requests.get(remote_filename_url, stream=True)
+    except (requests.HTTPError, requests.ConnectionError) as e:
+      if self.logger:
+        self.logger.exception(e)
+    else:
+      if r.status_code == 200:
+        dest_file = os.path.join(self.xmrgDLDir, file_name)
+        if self.logger:
+          self.logger.debug("Saving to file: %s" % (dest_file))
+        try:
+          with open(dest_file, 'wb') as xmrg_file:
+            for chunk in r:
+              xmrg_file.write(chunk)
+            if self.logger:
+              self.logger.debug("Downloaded file: %s in %f seconds." % (dest_file, time.time()-start_time))
+        except IOError,e:
+          if self.logger:
+            self.logger.exception(e)
+        return dest_file
+      else:
+        if self.logger:
+          self.logger.error("Unable to download file: %s" % (remote_filename_url))
+    return None
+
+  def sftp_download_file(self, **kwargs):
+    start_time = time.time()
+
+    try:
+      file_name = kwargs['file_name']
+      remote_file = os.path.join(self.sftp_base_directory, file_name)
+      dest_file = os.path.join(self.xmrgDLDir, file_name)
+      if self.logger:
+        self.logger.debug("FTPing file: %s" % (remote_file))
+
+      ftp = kwargs['ftp_obj']
+      ftp.get(remote_file, dest_file)
+      if self.logger:
+        self.logger.debug("FTPd file: %s in %f seconds." % (dest_file, time.time()-start_time))
+
+      return  dest_file
+    except (IOError, Exception) as e:
+      if self.logger:
+        self.logger.exception(e)
+    return None
   def download_file_list(self, file_list):
     files_downloaded = []
     for file_name in file_list:
+      if not self.sftp:
+        dl_filename = self.http_download_file(file_name)
+        if dl_filename is not None:
+          files_downloaded.append(dl_filename)
+      else:
+        try:
+          ssh = paramiko.SSHClient()
+          ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+          ssh.connect(self.baseURL, username=self.sftp_user, password=self.sftp_password)
+          ftp = ssh.open_sftp()
+          dl_filename = self.sftp_download_file(file_name=file_name,
+                                                ftp_obj=ftp)
+        except Exception as e:
+          if self.logger:
+            self.logger.exception(e)
+      """
       remote_filename_url = os.path.join(self.baseURL, file_name)
       if self.logger:
         self.logger.debug("Downloading file: %s" % (remote_filename_url))
@@ -849,7 +944,7 @@ class wqXMRGProcessing(object):
         else:
           if self.logger:
             self.logger.error("Unable to download file: %s" % (remote_filename_url))
-
+        """
     return files_downloaded
 
   def download_range(self, start_date, hour_count):
@@ -889,7 +984,10 @@ class wqXMRGProcessing(object):
     return file_list
 
   def build_filename(self, date_time):
-      return date_time.strftime('xmrg%m%d%Y%Hz.gz')
+      file_name = date_time.strftime('xmrg%m%d%Y%Hz')
+      if self.xmrg_file_ext:
+        file_name += '.' + self.xmrg_file_ext
+      return file_name
 
   def fill_gaps(self, start_date_time, hour_count):
     if self.logger:
