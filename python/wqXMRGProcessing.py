@@ -506,7 +506,7 @@ class wqXMRGProcessing(object):
       self.sftp = configFile.get('nexrad_database', 'use_sftp')
       if self.logger:
         self.logger.debug("Use sftp: %s" % (self.sftp))
-      self.sftp_base_directory = configFile.get('nexrad_database', 'sftp_base_directory')
+      self.sftp_base_directory = configFile.getboolean('nexrad_database', 'sftp_base_directory')
       if self.sftp:
         pwd_file = configFile.get('nexrad_database', 'sftp_password_file')
         pwd_config_file = ConfigParser.RawConfigParser()
