@@ -1,0 +1,20 @@
+[Core]
+Name = WQ Email Plugin
+Module = email_output_plugin
+
+[Documentation]
+Author = Dan Ramage
+Version = 0.1
+Website = http://howsthebeach.org
+Description = water quality processing.
+
+[Settings]
+mailhost=
+fromaddr=
+toaddrs=
+subject='[WQ] Prediction Results for %s'
+user=
+password=
+results_template=test_results_report.mako
+results_outfile=prediction_results.html
+report_url=
