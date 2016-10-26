@@ -12,9 +12,9 @@ class json_output_plugin(output_plugin):
 
   def initialize_plugin(self, **kwargs):
     try:
-      details = kwargs['details']
+      self.details = kwargs['details']
 
-      self.json_outfile = details.get("Settings", "json_outfile")
+      self.json_outfile = self.details.get("Settings", "json_outfile")
       return True
     except Exception as e:
       self.logger.exception(e)
@@ -23,6 +23,17 @@ class json_output_plugin(output_plugin):
   def emit(self, **kwargs):
     if self.logger:
       self.logger.debug("Starting emit for json output.")
+
+    site_message = {
+      'severity': '',
+      'message': ''
+    }
+    try:
+      site_message['severity'] = self.details.get("site_message", "severity")
+      site_message['message'] = self.details.get("site_message", "message")
+    except Exception as e:
+      if self.logger:
+        self.logger.exception(e)
 
     ensemble_data = kwargs['ensemble_tests']
     try:
@@ -53,6 +64,7 @@ class json_output_plugin(output_plugin):
               'desc': site_metadata.name,
               'ensemble': str(test_results.ensemblePrediction),
               'station': site_metadata.name,
+              'site_message': site_message,
               'tests': test_data
             }
           })
