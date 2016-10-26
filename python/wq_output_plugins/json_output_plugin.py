@@ -74,6 +74,7 @@ class json_output_plugin(output_plugin):
           'contents': {
             'run_date': kwargs['execution_date'],
             'testDate': kwargs['prediction_date'],
+            'site_message': site_message,
             'stationData': station_data
           }
         }
