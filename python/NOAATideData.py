@@ -668,7 +668,8 @@ class noaaTideDataExt(noaaTideData):
       shift = 1
 
     ret_xml = soapClient.service.getWaterLevelRawSixMin(station, beginDate, endDate, datum, unit, shift)
-
+    if self.logger:
+      self.logger.debug(ret_xml)
     parser = XMLParser(remove_blank_text=True, huge_tree=True)
     parser.set_element_class_lookup(objectify.ObjectifyElementClassLookup())
     objectify.set_default_parser(parser)
