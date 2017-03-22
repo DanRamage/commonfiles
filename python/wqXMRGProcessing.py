@@ -153,228 +153,231 @@ class xmrg_results(object):
 
 def process_xmrg_file(**kwargs):
   try:
-    processing_start_time = time.time()
-    xmrg_file_count = 1
-    logger = None
-    if 'logger' in kwargs:
-      if kwargs['logger']:
-        logger = logging.getLogger(current_process().name)
-        logger.debug("%s starting process_xmrg_file." % (current_process().name))
+    try:
+      processing_start_time = time.time()
+      xmrg_file_count = 1
+      logger = None
+      if 'logger' in kwargs:
+        if kwargs['logger']:
+          logger = logging.getLogger(current_process().name)
+          logger.debug("%s starting process_xmrg_file." % (current_process().name))
 
-    inputQueue = kwargs['input_queue']
-    resultsQueue = kwargs['results_queue']
-    save_all_precip_vals = kwargs['save_all_precip_vals']
-    #A course bounding box that restricts us to our area of interest.
-    minLatLong = None
-    maxLatLong = None
-    if 'min_lat_lon' in kwargs and 'max_lat_lon' in kwargs:
-      minLatLong = kwargs['min_lat_lon']
-      maxLatLong = kwargs['max_lat_lon']
+      inputQueue = kwargs['input_queue']
+      resultsQueue = kwargs['results_queue']
+      save_all_precip_vals = kwargs['save_all_precip_vals']
+      #A course bounding box that restricts us to our area of interest.
+      minLatLong = None
+      maxLatLong = None
+      if 'min_lat_lon' in kwargs and 'max_lat_lon' in kwargs:
+        minLatLong = kwargs['min_lat_lon']
+        maxLatLong = kwargs['max_lat_lon']
 
-    #Boundaries we are creating the weighted averages for.
-    boundaries = kwargs['boundaries']
+      #Boundaries we are creating the weighted averages for.
+      boundaries = kwargs['boundaries']
 
-    save_boundary_grid_cells = True
-    save_boundary_grids_one_pass = True
+      save_boundary_grid_cells = True
+      save_boundary_grids_one_pass = True
 
-    #This is the database insert datetime.
-    datetime = time.strftime( "%Y-%m-%dT%H:%M:%S", time.localtime() )
+      #This is the database insert datetime.
+      datetime = time.strftime( "%Y-%m-%dT%H:%M:%S", time.localtime() )
 
-    #Create the precip database we use local to the thread.
-    #nexrad_filename = "%s%s.sqlite" % (kwargs['nexrad_schema_directory'], current_process().name)
-    #if os.path.isfile(nexrad_filename):
-    #  os.remove(nexrad_filename)
-    nexrad_db_conn = nexrad_db()
-    nexrad_db_conn.connect(db_name=":memory:",
-                           spatialite_lib=kwargs['spatialite_lib'],
-                           nexrad_schema_files=kwargs['nexrad_schema_files'],
-                           nexrad_schema_directory=kwargs['nexrad_schema_directory']
-                           )
-    #nexrad_db_conn.db_connection.isolation_level = None
-    nexrad_db_conn.db_connection.execute("PRAGMA synchronous = OFF")
-    nexrad_db_conn.db_connection.execute("PRAGMA journal_mode = MEMORY")
-  except Exception,e:
-    if logger:
-      logger.exception(e)
-
-  else:
-    for xmrg_filename in iter(inputQueue.get, 'STOP'):
-      tot_file_time_start = time.time()
+      #Create the precip database we use local to the thread.
+      #nexrad_filename = "%s%s.sqlite" % (kwargs['nexrad_schema_directory'], current_process().name)
+      #if os.path.isfile(nexrad_filename):
+      #  os.remove(nexrad_filename)
+      nexrad_db_conn = nexrad_db()
+      nexrad_db_conn.connect(db_name=":memory:",
+                             spatialite_lib=kwargs['spatialite_lib'],
+                             nexrad_schema_files=kwargs['nexrad_schema_files'],
+                             nexrad_schema_directory=kwargs['nexrad_schema_directory']
+                             )
+      #nexrad_db_conn.db_connection.isolation_level = None
+      nexrad_db_conn.db_connection.execute("PRAGMA synchronous = OFF")
+      nexrad_db_conn.db_connection.execute("PRAGMA journal_mode = MEMORY")
+    except Exception,e:
       if logger:
-        logger.debug("ID: %s processing file: %s" % (current_process().name, xmrg_filename))
+        logger.exception(e)
 
-      xmrg_proc_obj = wqXMRGProcessing(logger=False)
-      xmrg = xmrgFile(current_process().name)
-      xmrg.openFile(xmrg_filename)
-
-      #Data store in hundreths of mm, we want mm, so convert.
-      dataConvert = 100.0
-
-      if xmrg.readFileHeader():
+    else:
+      for xmrg_filename in iter(inputQueue.get, 'STOP'):
+        tot_file_time_start = time.time()
         if logger:
-          logger.debug("ID: %s File Origin: X %d Y: %d Columns: %d Rows: %d" %(current_process().name, xmrg.XOR,xmrg.YOR,xmrg.MAXX,xmrg.MAXY))
-        try:
-          read_rows_start = time.time()
-          if xmrg.readAllRows():
-            if logger:
-              logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (current_process().name, time.time() - read_rows_start, xmrg_filename))
-            #This is the database insert datetime.
-            #Parse the filename to get the data time.
-            (directory, filetime) = os.path.split(xmrg.fileName)
-            (filetime, ext) = os.path.splitext(filetime)
-            filetime = xmrg_proc_obj.getCollectionDateFromFilename(filetime)
+          logger.debug("ID: %s processing file: %s" % (current_process().name, xmrg_filename))
 
-            #Flag to specifiy if any non 0 values were found. No need processing the weighted averages
-            #below if nothing found.
-            rainDataFound=False
-            #If we are using a bounding box, let's get the row/col in hrap coords.
-            llHrap = None
-            urHrap = None
-            start_col = 0
-            start_row = 0
-            end_col = xmrg.MAXX
-            end_row = xmrg.MAXY
-            if minLatLong != None and maxLatLong != None:
-              llHrap = xmrg.latLongToHRAP(minLatLong, True, True)
-              urHrap = xmrg.latLongToHRAP(maxLatLong, True, True)
-              start_row = llHrap.row
-              start_col = llHrap.column
-              end_row = urHrap.row
-              end_col = urHrap.column
+        xmrg_proc_obj = wqXMRGProcessing(logger=False)
+        xmrg = xmrgFile(current_process().name)
+        xmrg.openFile(xmrg_filename)
 
-            recsAdded = 0
-            results = xmrg_results()
+        #Data store in hundreths of mm, we want mm, so convert.
+        dataConvert = 100.0
 
-            #trans_cursor = nexrad_db_conn.db_connection.cursor()
-            #trans_cursor.execute("BEGIN")
-            add_db_rec_total_time = 0
-            #for row in range(startRow,xmrg.MAXY):
-            #  for col in range(startCol,xmrg.MAXX):
-            for row in range(start_row, end_row):
-              for col in range(start_col, end_col):
-                hrap = hrapCoord(xmrg.XOR + col, xmrg.YOR + row)
-                latlon = xmrg.hrapCoordToLatLong(hrap)
-                latlon.longitude *= -1
-                val = xmrg.grid[row][col]
-                #If there is no precipitation value, or the value is erroneous
-                if val <= 0:
-                  if save_all_precip_vals:
-                    val = 0
-                  else:
-                    continue
-                else:
-                  val /= dataConvert
-
-                rainDataFound = True
-                #Build polygon points. Each grid point represents a 4km square, so we want to create a polygon
-                #that has each point in the grid for a given point.
-                hrapNewPt = hrapCoord( xmrg.XOR + col, xmrg.YOR + row + 1)
-                latlonUL = xmrg.hrapCoordToLatLong( hrapNewPt )
-                latlonUL.longitude *= -1
-
-                hrapNewPt = hrapCoord( xmrg.XOR + col + 1, xmrg.YOR + row)
-                latlonBR = xmrg.hrapCoordToLatLong( hrapNewPt )
-                latlonBR.longitude *= -1
-
-                hrapNewPt = hrapCoord( xmrg.XOR + col + 1, xmrg.YOR + row + 1)
-                latlonUR = xmrg.hrapCoordToLatLong( hrapNewPt )
-                latlonUR.longitude *= -1
-
-                grid_polygon = Polygon([(latlon.longitude, latlon.latitude),
-                                        (latlonUL.longitude, latlonUL.latitude),
-                                        (latlonUR.longitude, latlonUR.latitude),
-                                        (latlonBR.longitude, latlonBR.latitude),
-                                        (latlon.longitude, latlon.latitude)])
-                if save_boundary_grid_cells:
-                  results.add_grid('complete_area', (grid_polygon, val))
-
-                try:
-                  add_db_rec_start = time.time()
-                  nexrad_db_conn.insert_precip_record(datetime, filetime,
-                                                      latlon.latitude, latlon.longitude,
-                                                      val,
-                                                      grid_polygon,
-                                                      None)
-                  #if logger:
-                  # logger.debug("ID: %s(%f secs insert)" % (current_process().name, time.time() - add_db_rec_start))
-                  add_db_rec_total_time += time.time() - add_db_rec_start
-
-                  recsAdded += 1
-                except Exception,e:
-                  if logger:
-                    logger.exception(e)
-                  nexrad_db_conn.db_connection.rollback()
-            #Commit the inserts.
-            try:
-              commit_recs_start = time.time()
-              nexrad_db_conn.commit()
-              commit_recs_time = time.time() - commit_recs_start
-            except Exception,e:
+        if xmrg.readFileHeader():
+          if logger:
+            logger.debug("ID: %s File Origin: X %d Y: %d Columns: %d Rows: %d" %(current_process().name, xmrg.XOR,xmrg.YOR,xmrg.MAXX,xmrg.MAXY))
+          try:
+            read_rows_start = time.time()
+            if xmrg.readAllRows():
               if logger:
-                logger.exception(e)
-              nexrad_db.db_connection.rollback()
-            else:
-              if logger is not None:
-                logger.info("ID: %s(%f secs add %f secs commit) Processed: %d rows. Added: %d records to database."\
-                            %(current_process().name, add_db_rec_total_time, commit_recs_time, (row + 1),recsAdded))
+                logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (current_process().name, time.time() - read_rows_start, xmrg_filename))
+              #This is the database insert datetime.
+              #Parse the filename to get the data time.
+              (directory, filetime) = os.path.split(xmrg.fileName)
+              (filetime, ext) = os.path.splitext(filetime)
+              filetime = xmrg_proc_obj.getCollectionDateFromFilename(filetime)
 
-              results.datetime = filetime
-              for boundary in boundaries:
-                try:
+              #Flag to specifiy if any non 0 values were found. No need processing the weighted averages
+              #below if nothing found.
+              rainDataFound=False
+              #If we are using a bounding box, let's get the row/col in hrap coords.
+              llHrap = None
+              urHrap = None
+              start_col = 0
+              start_row = 0
+              end_col = xmrg.MAXX
+              end_row = xmrg.MAXY
+              if minLatLong != None and maxLatLong != None:
+                llHrap = xmrg.latLongToHRAP(minLatLong, True, True)
+                urHrap = xmrg.latLongToHRAP(maxLatLong, True, True)
+                start_row = llHrap.row
+                start_col = llHrap.column
+                end_row = urHrap.row
+                end_col = urHrap.column
+
+              recsAdded = 0
+              results = xmrg_results()
+
+              #trans_cursor = nexrad_db_conn.db_connection.cursor()
+              #trans_cursor.execute("BEGIN")
+              add_db_rec_total_time = 0
+              #for row in range(startRow,xmrg.MAXY):
+              #  for col in range(startCol,xmrg.MAXX):
+              for row in range(start_row, end_row):
+                for col in range(start_col, end_col):
+                  hrap = hrapCoord(xmrg.XOR + col, xmrg.YOR + row)
+                  latlon = xmrg.hrapCoordToLatLong(hrap)
+                  latlon.longitude *= -1
+                  val = xmrg.grid[row][col]
+                  #If there is no precipitation value, or the value is erroneous
+                  if val <= 0:
+                    if save_all_precip_vals:
+                      val = 0
+                    else:
+                      continue
+                  else:
+                    val /= dataConvert
+
+                  rainDataFound = True
+                  #Build polygon points. Each grid point represents a 4km square, so we want to create a polygon
+                  #that has each point in the grid for a given point.
+                  hrapNewPt = hrapCoord( xmrg.XOR + col, xmrg.YOR + row + 1)
+                  latlonUL = xmrg.hrapCoordToLatLong( hrapNewPt )
+                  latlonUL.longitude *= -1
+
+                  hrapNewPt = hrapCoord( xmrg.XOR + col + 1, xmrg.YOR + row)
+                  latlonBR = xmrg.hrapCoordToLatLong( hrapNewPt )
+                  latlonBR.longitude *= -1
+
+                  hrapNewPt = hrapCoord( xmrg.XOR + col + 1, xmrg.YOR + row + 1)
+                  latlonUR = xmrg.hrapCoordToLatLong( hrapNewPt )
+                  latlonUR.longitude *= -1
+
+                  grid_polygon = Polygon([(latlon.longitude, latlon.latitude),
+                                          (latlonUL.longitude, latlonUL.latitude),
+                                          (latlonUR.longitude, latlonUR.latitude),
+                                          (latlonBR.longitude, latlonBR.latitude),
+                                          (latlon.longitude, latlon.latitude)])
                   if save_boundary_grid_cells:
-                    boundary_grid_query_start = time.time()
-                    #cells_cursor = nexrad_db_conn.get_radar_data_for_boundary(boundary['polygon'], filetime, filetime)
-                    cells_cursor = nexrad_db_conn.get_radar_data_for_boundary(boundary.object_geometry, filetime, filetime)
-                    for row in cells_cursor:
-                      cell_poly = wkt_loads(row['WKT'])
-                      precip = row['precipitation']
-                      #results.add_grid(boundary['name'], (cell_poly, precip))
-                      results.add_grid(boundary.name, (cell_poly, precip))
+                    results.add_grid('complete_area', (grid_polygon, val))
 
+                  try:
+                    add_db_rec_start = time.time()
+                    nexrad_db_conn.insert_precip_record(datetime, filetime,
+                                                        latlon.latitude, latlon.longitude,
+                                                        val,
+                                                        grid_polygon,
+                                                        None)
+                    #if logger:
+                    # logger.debug("ID: %s(%f secs insert)" % (current_process().name, time.time() - add_db_rec_start))
+                    add_db_rec_total_time += time.time() - add_db_rec_start
+
+                    recsAdded += 1
+                  except Exception,e:
                     if logger:
-                      logger.debug("ID: %s(%f secs) to query grids for boundary: %s"\
-                                   % (current_process().name, time.time() - boundary_grid_query_start, boundary.name))
+                      logger.exception(e)
+                    nexrad_db_conn.db_connection.rollback()
+              #Commit the inserts.
+              try:
+                commit_recs_start = time.time()
+                nexrad_db_conn.commit()
+                commit_recs_time = time.time() - commit_recs_start
+              except Exception,e:
+                if logger:
+                  logger.exception(e)
+                nexrad_db.db_connection.rollback()
+              else:
+                if logger is not None:
+                  logger.info("ID: %s(%f secs add %f secs commit) Processed: %d rows. Added: %d records to database."\
+                              %(current_process().name, add_db_rec_total_time, commit_recs_time, (row + 1),recsAdded))
+
+                results.datetime = filetime
+                for boundary in boundaries:
+                  try:
+                    if save_boundary_grid_cells:
+                      boundary_grid_query_start = time.time()
+                      #cells_cursor = nexrad_db_conn.get_radar_data_for_boundary(boundary['polygon'], filetime, filetime)
+                      cells_cursor = nexrad_db_conn.get_radar_data_for_boundary(boundary.object_geometry, filetime, filetime)
+                      for row in cells_cursor:
+                        cell_poly = wkt_loads(row['WKT'])
+                        precip = row['precipitation']
+                        #results.add_grid(boundary['name'], (cell_poly, precip))
+                        results.add_grid(boundary.name, (cell_poly, precip))
+
+                      if logger:
+                        logger.debug("ID: %s(%f secs) to query grids for boundary: %s"\
+                                     % (current_process().name, time.time() - boundary_grid_query_start, boundary.name))
 
 
-                  avg_start_time = time.time()
-                  #avg = nexrad_db_conn.calculate_weighted_average(boundary['polygon'], filetime, filetime)
-                  avg = nexrad_db_conn.calculate_weighted_average(boundary.object_geometry, filetime, filetime)
-                  #results.add_boundary_result(boundary['name'], 'weighted_average', avg)
-                  results.add_boundary_result(boundary.name, 'weighted_average', avg)
-                  avg_total_time = time.time() - avg_start_time
-                  if logger:
-                    logger.debug("ID: %s(%f secs) to process average for boundary: %s"\
-                                 % (current_process().name, avg_total_time, boundary.name))
-                except Exception,e:
-                  if logger:
-                    logger.exception(e)
-            resultsQueue.put(results)
+                    avg_start_time = time.time()
+                    #avg = nexrad_db_conn.calculate_weighted_average(boundary['polygon'], filetime, filetime)
+                    avg = nexrad_db_conn.calculate_weighted_average(boundary.object_geometry, filetime, filetime)
+                    #results.add_boundary_result(boundary['name'], 'weighted_average', avg)
+                    results.add_boundary_result(boundary.name, 'weighted_average', avg)
+                    avg_total_time = time.time() - avg_start_time
+                    if logger:
+                      logger.debug("ID: %s(%f secs) to process average for boundary: %s"\
+                                   % (current_process().name, avg_total_time, boundary.name))
+                  except Exception,e:
+                    if logger:
+                      logger.exception(e)
+              resultsQueue.put(results)
 
-            nexrad_db_conn.delete_all()
-          #Only do it for one file. Following files should all be same results other than the precip values.
-          if save_boundary_grids_one_pass:
-            save_boundary_grid_cells = False
-          xmrg.cleanUp(kwargs['delete_source_file'], kwargs['delete_compressed_source_file'])
-          xmrg.Reset()
-          #Counter for number of files processed.
-          xmrg_file_count += 1
+              nexrad_db_conn.delete_all()
+            #Only do it for one file. Following files should all be same results other than the precip values.
+            if save_boundary_grids_one_pass:
+              save_boundary_grid_cells = False
+            xmrg.cleanUp(kwargs['delete_source_file'], kwargs['delete_compressed_source_file'])
+            xmrg.Reset()
+            #Counter for number of files processed.
+            xmrg_file_count += 1
+            if logger:
+              logger.debug("ID: %s(%f secs) total time to process data for file: %s" % (current_process().name, time.time() - tot_file_time_start, xmrg_filename))
+          except Exception,e:
+            if logger:
+              logger.exception(e)
+
+        else:
           if logger:
-            logger.debug("ID: %s(%f secs) total time to process data for file: %s" % (current_process().name, time.time() - tot_file_time_start, xmrg_filename))
-        except Exception,e:
-          if logger:
-            logger.exception(e)
+            logger.error("Process: %s Failed to process file: %s" % (current_process().name, xmrg_filename))
 
-      else:
-        if logger:
-          logger.error("Process: %s Failed to process file: %s" % (current_process().name, xmrg_filename))
+      if nexrad_db_conn:
+        nexrad_db_conn.close()
 
-    if nexrad_db_conn:
-      nexrad_db_conn.close()
-
-    if logger:
-      logger.debug("ID: %s process finished. Processed: %d files in time: %f seconds"\
-                   % (current_process().name, xmrg_file_count, time.time() - processing_start_time))
-    return
+      if logger:
+        logger.debug("ID: %s process finished. Processed: %d files in time: %f seconds"\
+                     % (current_process().name, xmrg_file_count, time.time() - processing_start_time))
+  except Exception as e:
+    logger.exception(e)
+  return
 
 """
 Want to move away form the XML config file used and use an ini file. Create a new class
