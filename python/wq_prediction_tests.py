@@ -8,7 +8,7 @@ class predictionLevels(object):
   MEDIUM = 2
   HIGH = 3
   def __init__(self, value):
-    self.value = value
+    self.__value = value
   def __str__(self):
     if self.value == self.LOW:
       return "LOW"
@@ -21,6 +21,13 @@ class predictionLevels(object):
     else:
       return "NO TEST"
 
+  @property
+  def value(self):
+    return self.__value
+
+  @value.setter
+  def value(self, value):
+    self.__value = value
 """
 Class: predictionTest
 Purpose: This is the base class for our various prediction tests.
@@ -137,8 +144,8 @@ class wqEquations(object):
       for testObj in self.tests:
         #DWR 2011-10-11
         #If a test wasn't executed, we skip using it.
-        if testObj.predictionLevel != predictionLevels.NO_TEST and\
-          testObj.predictionLevel != predictionLevels.DISABLED:
+        if testObj.predictionLevel.value != predictionLevels.NO_TEST and\
+          testObj.predictionLevel.value != predictionLevels.DISABLED:
           sum += testObj.predictionLevel.value
           executedTstCnt += 1
 
