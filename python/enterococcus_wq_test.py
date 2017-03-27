@@ -230,6 +230,7 @@ class EnterococcusPredictionTest(predictionTest):
         self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
     else:
       self.logger.debug("Test: %s is not enabled" % (self.model_name))
+      self.predictionLevel.value = predictionLevels.DISABLED
     return self.predictionLevel.value
 
   """
@@ -329,4 +330,6 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
         self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
     else:
       self.logger.debug("Test: %s not enabled." % (self.model_name))
+      self.predictionLevel.value = predictionLevels.DISABLED
+
     return self.predictionLevel.value
