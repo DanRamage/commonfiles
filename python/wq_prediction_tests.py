@@ -137,7 +137,8 @@ class wqEquations(object):
       for testObj in self.tests:
         #DWR 2011-10-11
         #If a test wasn't executed, we skip using it.
-        if testObj.predictionLevel != predictionLevels.NO_TEST:
+        if testObj.predictionLevel != predictionLevels.NO_TEST and\
+          testObj.predictionLevel != predictionLevels.DISABLED:
           sum += testObj.predictionLevel.value
           executedTstCnt += 1
 
