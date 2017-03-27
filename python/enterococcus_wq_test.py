@@ -146,22 +146,23 @@ class EnterococcusPredictionTest(predictionTest):
   Parameters:
   formula - a string with the appropriate string substitution parameters that the runTest function will
     apply the data against.
-  lowCategoryLimit - A float that defines the lower limit which categorizes the test result as a LOW probability.
-  highCategoryLimit - A float that defines the high limit which categorizes the test result as a HIGH probability.
+  site_name - String specifying which site the test is for.
+  model_name - String giving the name of the model.
+  model_enabled - Flag to specify if the model is to be tested.
   Return:
   """
-  def __init__(self, formula, site_name, model_name, use_logger=True):
-    predictionTest.__init__(self, formula, site_name)
-    self.model_name = model_name
-    self.lowCategoryLimit = 104.0
-    self.highCategoryLimit = 500.0
+  #def __init__(self, formula, site_name, model_name, model_enabled):
+  def __init__(self, **kwargs):
+    predictionTest.__init__(self, kwargs.get('formula', ''), kwargs.get('site_name', ''), kwargs.get('model_enabled', True))
+    self.model_name = kwargs.get('model_name', '')
+    self.lowCategoryLimit = kwargs.get('low_limit', 104.0)
+    self.highCategoryLimit = kwargs.get('high_limit', 500.0)
     self.mlrResult = None
     self.log10MLRResult = None
     self.logger = None
     self.data_used = OrderedDict()
     self.test_time = 0
-    if use_logger:
-      self.logger = logging.getLogger(type(self).__name__)
+    self.logger = logging.getLogger(type(self).__name__)
 
 
   """

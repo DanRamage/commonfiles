@@ -32,11 +32,12 @@ class predictionTest(object):
     name - A string identifier for the test.
   Return:
   """
-  def __init__(self, formula, name=None):
+  def __init__(self, formula, name=None, enabled=True):
     self.formula = formula
     self.predictionLevel = predictionLevels(predictionLevels.NO_TEST)
     self.name = name
     self.test_time = None
+    self.enabled = enabled
 
   """
   Function: runTest
