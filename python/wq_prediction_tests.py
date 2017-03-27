@@ -2,6 +2,7 @@
 import logging.config
 
 class predictionLevels(object):
+  DISABLED = -2
   NO_TEST = -1
   LOW = 1
   MEDIUM = 2
@@ -15,6 +16,8 @@ class predictionLevels(object):
       return "MEDIUM"
     elif self.value == self.HIGH:
       return "HIGH"
+    elif self.value == self.DISABLED:
+      return "TEST DISABLED"
     else:
       return "NO TEST"
 

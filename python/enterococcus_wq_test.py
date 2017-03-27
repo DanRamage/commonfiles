@@ -185,50 +185,51 @@ class EnterococcusPredictionTest(predictionTest):
     The result of evaluating the formula.
   """
   def runTest(self, data):
-
-    if self.logger:
-      self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self.model_name, self.formula))
-
-    start_time = time.time()
-    try:
-      #Get the variables from the formula, then verify the passed in data has the observation and a valid value.
-      valid_data = True
-      sym_expr = sympify(self.formula, globals())
-
-      observation_variables = sym_expr.free_symbols
-      mlr_symbols = {}
-      for obs_var in observation_variables:
-        self.data_used[obs_var.name] = None
-        if obs_var.name in data:
-          self.data_used[obs_var.name] = data[obs_var.name]
-          mlr_symbols[obs_var] = symFloat(data[obs_var.name])
-          if data[obs_var.name] == wq_defines.NO_DATA:
-            valid_data = False
-        else:
-          valid_data = False
-      if valid_data:
-        self.log10MLRResult = sym_expr.evalf(subs=mlr_symbols)
-        if self.logger:
-          self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.log10MLRResult, self.data_used))
-        try:
-          self.mlrResult = pow(10,self.log10MLRResult)
-          self.categorize_result()
-        except OverflowError,e:
-          if self.logger:
-            self.logger.exception(e)
-      else:
-        if self.logger:
-          self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
-    except Exception,e:
+    if self.enabled:
       if self.logger:
-        self.logger.exception(e)
+        self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self.model_name, self.formula))
 
-    self.test_time = time.time() - start_time
-    if self.logger:
-      self.logger.debug("Test: %s execute in: %f ms" % (self.model_name, self.test_time * 1000))
+      start_time = time.time()
+      try:
+        #Get the variables from the formula, then verify the passed in data has the observation and a valid value.
+        valid_data = True
+        sym_expr = sympify(self.formula, globals())
 
-      self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
+        observation_variables = sym_expr.free_symbols
+        mlr_symbols = {}
+        for obs_var in observation_variables:
+          self.data_used[obs_var.name] = None
+          if obs_var.name in data:
+            self.data_used[obs_var.name] = data[obs_var.name]
+            mlr_symbols[obs_var] = symFloat(data[obs_var.name])
+            if data[obs_var.name] == wq_defines.NO_DATA:
+              valid_data = False
+          else:
+            valid_data = False
+        if valid_data:
+          self.log10MLRResult = sym_expr.evalf(subs=mlr_symbols)
+          if self.logger:
+            self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.log10MLRResult, self.data_used))
+          try:
+            self.mlrResult = pow(10,self.log10MLRResult)
+            self.categorize_result()
+          except OverflowError,e:
+            if self.logger:
+              self.logger.exception(e)
+        else:
+          if self.logger:
+            self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
+      except Exception,e:
+        if self.logger:
+          self.logger.exception(e)
 
+      self.test_time = time.time() - start_time
+      if self.logger:
+        self.logger.debug("Test: %s execute in: %f ms" % (self.model_name, self.test_time * 1000))
+
+        self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
+    else:
+      self.logger.debug("Test: %s is not enabled" % (self.model_name))
     return self.predictionLevel.value
 
   """
@@ -276,51 +277,52 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
     The result of evaluating the formula.
   """
   def runTest(self, data):
-
-    if self.logger:
-      self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self.model_name, self.formula))
-
-    start_time = time.time()
-    try:
-      #Get the variables from the formula, then verify the passed in data has the observation and a valid value.      valid_data = True
-      valid_data = True
-      sym_expr = sympify(self.formula, globals())
-
-      observation_variables = sym_expr.free_symbols
-      mlr_symbols = {}
-      for obs_var in observation_variables:
-        self.data_used[obs_var.name] = None
-        if obs_var.name in data:
-          self.data_used[obs_var.name] = data[obs_var.name]
-          if data[obs_var.name] != 0:
-            mlr_symbols[obs_var] = symFloat(data[obs_var.name])
-          else:
-            mlr_symbols[obs_var] = int(data[obs_var.name])
-          if data[obs_var.name] == wq_defines.NO_DATA:
-            valid_data = False
-        else:
-          valid_data = False
-      if valid_data:
-        try:
-          self.mlrResult = sym_expr.evalf(subs=mlr_symbols, n=4)
-          self.mlrResult = int(self.mlrResult + 0.5)
-          if self.logger:
-            self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.mlrResult, self.data_used))
-          self.categorize_result()
-        except (TypeError, OverflowError) as e:
-          if self.logger:
-            self.logger.exception(e)
-      else:
-        if self.logger:
-          self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
-    except Exception,e:
+    if self.enabled:
       if self.logger:
-        self.logger.exception(e)
+        self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self.model_name, self.formula))
 
-    self.test_time = time.time() - start_time
-    if self.logger:
-      self.logger.debug("Test: %s execute in: %f ms" % (self.model_name, self.test_time * 1000))
+      start_time = time.time()
+      try:
+        #Get the variables from the formula, then verify the passed in data has the observation and a valid value.      valid_data = True
+        valid_data = True
+        sym_expr = sympify(self.formula, globals())
 
-      self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
+        observation_variables = sym_expr.free_symbols
+        mlr_symbols = {}
+        for obs_var in observation_variables:
+          self.data_used[obs_var.name] = None
+          if obs_var.name in data:
+            self.data_used[obs_var.name] = data[obs_var.name]
+            if data[obs_var.name] != 0:
+              mlr_symbols[obs_var] = symFloat(data[obs_var.name])
+            else:
+              mlr_symbols[obs_var] = int(data[obs_var.name])
+            if data[obs_var.name] == wq_defines.NO_DATA:
+              valid_data = False
+          else:
+            valid_data = False
+        if valid_data:
+          try:
+            self.mlrResult = sym_expr.evalf(subs=mlr_symbols, n=4)
+            self.mlrResult = int(self.mlrResult + 0.5)
+            if self.logger:
+              self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.mlrResult, self.data_used))
+            self.categorize_result()
+          except (TypeError, OverflowError) as e:
+            if self.logger:
+              self.logger.exception(e)
+        else:
+          if self.logger:
+            self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
+      except Exception,e:
+        if self.logger:
+          self.logger.exception(e)
 
+      self.test_time = time.time() - start_time
+      if self.logger:
+        self.logger.debug("Test: %s execute in: %f ms" % (self.model_name, self.test_time * 1000))
+
+        self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
+    else:
+      self.logger.debug("Test: %s not enabled." % (self.model_name))
     return self.predictionLevel.value
