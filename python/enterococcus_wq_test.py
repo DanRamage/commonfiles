@@ -241,14 +241,18 @@ class EnterococcusPredictionTest(predictionTest):
     A predictionLevels value.
   """
   def categorize_result(self):
-    self.predictionLevel.value = predictionLevels.NO_TEST
-    if self.mlrResult is not None:
-      if self.mlrResult < self.lowCategoryLimit:
-        self.predictionLevel.value = predictionLevels.LOW
-      elif self.mlrResult >= self.highCategoryLimit:
-        self.predictionLevel.value = predictionLevels.HIGH
-      else:
-        self.predictionLevel.value = predictionLevels.MEDIUM
+    if self.enabled:
+      self.predictionLevel.value = predictionLevels.NO_TEST
+      if self.mlrResult is not None:
+        if self.mlrResult < self.lowCategoryLimit:
+          self.predictionLevel.value = predictionLevels.LOW
+        elif self.mlrResult >= self.highCategoryLimit:
+          self.predictionLevel.value = predictionLevels.HIGH
+        else:
+          self.predictionLevel.value = predictionLevels.MEDIUM
+    else:
+      self.predictionLevel.value = predictionLevels.DISABLED
+
   """
   Function: getResults
   Purpose: Returns a dictionary with the variables that went into the predictionLevel.
