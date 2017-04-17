@@ -18,9 +18,12 @@ import logging.config
 from xmrgFile import xmrgCleanup
 
 def archiveXMRGFiles(src_dir, target_dir):
+  logger = logging.getLogger('archive_xmrg')
+  logger.debug("Start archiveXMRGFiles")
   cleanUp = xmrgCleanup(src_dir, target_dir)
   cleanUp.organizeFilesIntoDirectories(datetime.datetime.utcnow())
-  
+  logger.debug("FInished archiveXMRGFiles")
+
 if __name__ == '__main__':
   # create logger with 'spam_application'
   logger = logging.getLogger('archive_xmrg')
