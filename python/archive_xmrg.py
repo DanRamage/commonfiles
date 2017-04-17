@@ -31,5 +31,15 @@ if __name__ == '__main__':
                     help="" )
   (options, args) = parser.parse_args()
 
+  # create logger with 'spam_application'
+  logger = logging.getLogger('archive_xmrg')
+  logger.setLevel(logging.DEBUG)
+  ch = logging.StreamHandler()
+  ch.setLevel(logging.ERROR)
+  # create formatter and add it to the handlers
+  formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+  ch.setFormatter(formatter)
+  logger.addHandler(ch)
+
   if(options.archiveXMRG):
     archiveXMRGFiles(options.source_dir, options.dest_dir)
