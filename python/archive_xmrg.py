@@ -30,18 +30,7 @@ if __name__ == '__main__':
   parser.add_option("-d", "--DestinationDirectory", dest="dest_dir",
                     help="" )
   (options, args) = parser.parse_args()
-  if( options.xmlConfigFile == None ):
-    parser.print_usage()
-    parser.print_help()
-    sys.exit(-1)
 
-  configSettings = xmlConfigFile(options.xmlConfigFile)
-
-  logFile = configSettings.getEntry('//environment/logging/logConfigFile')
-  logging.config.fileConfig(logFile)
-  logger = logging.getLogger("dhec_processing_logger")
-  logger.info("Session started")
-  
   if(options.archiveXMRG):
     archiveXMRGFiles(options.source_dir, options.dest_dir)
 
