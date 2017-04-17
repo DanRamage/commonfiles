@@ -33,5 +33,3 @@ if __name__ == '__main__':
 
   if(options.archiveXMRG):
     archiveXMRGFiles(options.source_dir, options.dest_dir)
-
-  logger.info("Session stopped")
