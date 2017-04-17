@@ -26,7 +26,7 @@ if __name__ == '__main__':
   logger = logging.getLogger('archive_xmrg')
   logger.setLevel(logging.DEBUG)
   ch = logging.StreamHandler(sys.stdout)
-  ch.setLevel(logging.ERROR)
+  ch.setLevel(logging.DEBUG)
   # create formatter and add it to the handlers
   formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
   ch.setFormatter(formatter)
