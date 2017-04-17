@@ -25,6 +25,10 @@ if __name__ == '__main__':
   parser = optparse.OptionParser()
   parser.add_option("-a", "--ArchiveXMRGFiles", dest="archiveXMRG", action= 'store_true',
                     help="If true, then files in the XMRG download directory are moved to the archival directory." )
+  parser.add_option("-s", "--SourceDirectory", dest="source_dir",
+                    help="" )
+  parser.add_option("-d", "--DestinationDirectory", dest="dest_dir",
+                    help="" )
   (options, args) = parser.parse_args()
   if( options.xmlConfigFile == None ):
     parser.print_usage()
@@ -39,6 +43,6 @@ if __name__ == '__main__':
   logger.info("Session started")
   
   if(options.archiveXMRG):
-    archiveXMRGFiles(options.xmlConfigFile)
+    archiveXMRGFiles(options.source_dir, options.dest_dir)
 
   logger.info("Session stopped")
