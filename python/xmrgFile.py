@@ -886,11 +886,10 @@ class xmrgCleanup(object):
     xmrgDestDir - The directory to move the XMRG files
     logger - Flag, if true, logging is done, otherwise it is not.
   """
-  def __init__(self, xmrgSrcDir, xmrgDestDir, logger=True):
+  def __init__(self, xmrgSrcDir, xmrgDestDir):
     self.srcDirectory = xmrgSrcDir
     self.destDirectory = xmrgDestDir
-    if(logger):
-      self.logger = logging.getLogger(type(self).__name__)
+    self.logger = logging.getLogger(type(self).__name__)
       
   
   """
