@@ -902,7 +902,8 @@ class xmrgCleanup(object):
   """
   def organizeFilesIntoDirectories(self, filesOlderThan=None, organizeByYear=True):
     fileList = os.listdir(self.srcDirectory)
-    
+
+    self.logger.debug("%d files in directory" % (len(fileList)))
     for fileName in fileList:      
       fullPath = "%s/%s" % (self.srcDirectory,fileName)       
       #Verify we have a file, if not, pull it from the list.
