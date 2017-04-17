@@ -42,7 +42,7 @@ if __name__ == '__main__':
   (options, args) = parser.parse_args()
 
   logger.debug("Log opened, options: %s" % (options))
-  if(options.archiveXMRG):
-    archiveXMRGFiles(options.source_dir, options.dest_dir)
+
+  archiveXMRGFiles(options.source_dir, options.dest_dir)
 
   logger.debug("Log closed.")
