@@ -41,5 +41,8 @@ if __name__ == '__main__':
   ch.setFormatter(formatter)
   logger.addHandler(ch)
 
+  logger.debug("Log opened.")
   if(options.archiveXMRG):
     archiveXMRGFiles(options.source_dir, options.dest_dir)
+
+  logger.debug("Log closed.")
