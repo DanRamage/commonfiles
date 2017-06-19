@@ -38,15 +38,19 @@ class smtpClass:
   
     if all([self._host, self._port, self._user, self._password]):  
       try:
-        self._server = smtplib.SMTP(self._host, self._port)
-        if self._use_tls:
-          self._server.starttls()
+        if not self._use_tls:
+          self._server = smtplib.SMTP(self._host, self._port)
+          #if self._use_tls:
+          #  self._server.starttls()
+        else:
+          self._server = smtplib.SMTP_SSL(self._host, self._port)
+          self._server.ehlo()
       except smtplib.SMTPException, e:
         raise ConnectionError("Connection failed!")    
       try:
         self._server.login(self._user, self._password)            
       except smtplib.SMTPException, e:                                
-        raise LoginError("Login Failed!")
+        raise e
   
   
   
