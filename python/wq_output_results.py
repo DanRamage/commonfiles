@@ -206,7 +206,7 @@ class wq_station_advisories_file:
           station_json_file.write(feature_json)
       else:
         self.logger.error("Feature is None")
-    except (json.JSONDecodeError, IOError) as e:
+    except (IOError, Exception) as e:
       self.logger.exception(e)
 
     self.logger.debug("Finished create_file in %f seconds" % (time.time() - start_time))
