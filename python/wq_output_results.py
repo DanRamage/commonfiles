@@ -40,6 +40,9 @@ class wq_samples_collection:
   def __init__(self):
     self._wq_samples = {}
 
+  def __len__(self):
+    return len(self._wq_samples.keys())
+
   def append(self, wq_sample):
     if type(wq_sample) is list:
       for sample in wq_sample:

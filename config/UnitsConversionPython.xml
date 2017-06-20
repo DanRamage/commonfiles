@@ -23,6 +23,11 @@
     <units>mb</units>
   </unit_conversion>
 
+  <unit_conversion id="inHg_to_mb">
+    <conversion_formula>("%.2f" % (var1*33.86))</conversion_formula>
+    <units>mb</units>
+  </unit_conversion>
+
   <unit_conversion id="mmhg_to_mb">
     <conversion_formula>("%.2f" % (var1/0.75218))</conversion_formula>
     <units>mb</units>
@@ -39,6 +44,11 @@
   </unit_conversion>
 
   <unit_conversion id="fahrenheit_to_celsius">
+    <conversion_formula>("%.1f" % ((var1-32.0)*(5.0/9.0)))</conversion_formula>
+    <units>&#x00B0;F</units>
+  </unit_conversion>
+
+  <unit_conversion id="F_to_celsius">
     <conversion_formula>("%.1f" % ((var1-32.0)*(5.0/9.0)))</conversion_formula>
     <units>&#x00B0;F</units>
   </unit_conversion>
@@ -109,6 +119,11 @@
     <units>ft</units>
   </unit_conversion>
 
+  <unit_conversion id="ft_to_m">
+    <conversion_formula>("%.2f" % (var1*0.3048))</conversion_formula>
+    <units>ft</units>
+  </unit_conversion>
+
   <unit_conversion id="mS_cm-1_to_mS_cm-1">
     <conversion_formula>("%.2f" % (var1))</conversion_formula>
     <units>mS/cm</units>
@@ -120,6 +135,11 @@
   </unit_conversion>
 
   <unit_conversion id="mg_L-1_to_mg_L-1">
+    <conversion_formula>("%.2f" % (var1))</conversion_formula>
+    <units>mg/L</units>
+  </unit_conversion>
+
+  <unit_conversion id="mg/L_to_mg_L-1">
     <conversion_formula>("%.2f" % (var1))</conversion_formula>
     <units>mg/L</units>
   </unit_conversion>
@@ -151,6 +171,16 @@
     <conversion_formula>("%f" % (var1))</conversion_formula>
     <units>&#x00B5;g/L</units>
   </unit_conversion>
+  <unit_conversion id="ug/L_to_ug_L-1">
+    <conversion_formula>("%f" % (var1))</conversion_formula>
+    <units>&#x00B5;g/L</units>
+  </unit_conversion>
+
+  <unit_conversion id="in_to_mm">
+    <conversion_formula>("%f" % (var1*25.4))</conversion_formula>
+    <units>mm</units>
+  </unit_conversion>
+
   <unit_conversion id="mm_to_mm">
     <conversion_formula>("%f" % (var1))</conversion_formula>
     <units>mm</units>
@@ -162,6 +192,11 @@
   <unit_conversion id="millimoles_per_m^2_to_millimoles_per_m^2">
     <conversion_formula>("%.1f" % (var1))</conversion_formula>
     <units>millimoles/m&#x00B2;</units>
+  </unit_conversion>
+
+  <unit_conversion id="Degrees_to_degrees_true">
+    <conversion_formula>("%f" % (var1))</conversion_formula>
+    <units>&#x00B0; From N</units>
   </unit_conversion>
 
 
