@@ -172,7 +172,7 @@ class wq_station_advisories_file:
                 self.logger.debug("Station: %s adding date: %s" % (self.sample_site.name, test_data['date']))
                 file_beachadvisories.append(test_data)
                 file_beachadvisories.sort(key=lambda x: x['date'], reverse=False)
-      except (json.JSONDecodeError, IOError, Exception) as e:
+      except (IOError, Exception) as e:
         if self.logger:
           self.logger.exception(e)
     else:
