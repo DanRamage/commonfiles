@@ -774,7 +774,10 @@ class nexrad_db(object):
     self.db_connection.enable_load_extension(True)
     sql = 'SELECT load_extension("%s");' % (kwargs['spatialite_lib'])
     db_cursor = self.db_connection.cursor()
-    db_cursor.execute(sql)
+    try:
+      db_cursor.execute(sql)
+    except Exception,e:
+      raise
 
     if(db_cursor != None):
       return(True)

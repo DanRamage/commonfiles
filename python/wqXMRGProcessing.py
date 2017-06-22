@@ -16,7 +16,6 @@ from multiprocessing import Process, Queue, current_process
 from shapely.geometry import Polygon
 from shapely.wkt import loads as wkt_loads
 
-import paramiko
 from pykml.factory import KML_ElementMaker as KML
 from lxml import etree
 from wqDatabase import wqDB
@@ -908,6 +907,8 @@ class wqXMRGProcessing(object):
   def download_file_list(self, file_list):
     files_downloaded = []
     if self.sftp:
+      import paramiko
+
       ssh = paramiko.SSHClient()
       ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
       ssh.connect(self.baseURL, username=self.sftp_user, password=self.sftp_password)

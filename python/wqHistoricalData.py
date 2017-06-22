@@ -112,6 +112,7 @@ class geometry_list(list):
 
     except (IOError,Exception) as e:
       if self.logger:
+        self.logger.error("Geometry creation issue on line: %d" % (line_num))
         self.logger.exception(e)
 
     return False
@@ -165,6 +166,44 @@ class tide_data_file(dict):
           line_num += 1
       if self.logger:
         self.logger.debug("Processed %d lines." % (line_num))
+    except (IOError,Exception) as e:
+      if self.logger:
+        self.logger.exception(e)
+
+
+  def add_data(self, date, station, tide_range, tide_hi, tide_lo):
+    self.__setitem__(date), {'station': station,
+                              'range': tide_range,
+                              'hi': tide_hi,
+                              'lo': tide_lo}
+
+class tide_data_file_ex(dict):
+  def __init__(self):
+    self.logger = logging.getLogger(type(self).__name__)
+
+  def open(self, tide_csv_file):
+    if self.logger:
+      self.logger.debug("Opening tide file: %s" % (tide_csv_file))
+    try:
+      with open(tide_csv_file, 'r') as tide_data_file:
+        header = ["Station", "Date", "Range", "HH", "HH Date", "LL", "LL Date", "Tide Stage"]
+        data_csv = csv.DictReader(tide_data_file, fieldnames=header)
+        line_num = 0
+        for row in data_csv:
+          if line_num:
+            self.__setitem__(row['Date'], {
+              'station': row['Station'],
+              'range': row['Range'],
+              'hh': row['HH'],
+              'hh_date': row['HH Date'],
+              'll': row['LL'],
+              'll_date': row['LL Date'],
+              'tide_stage': row['Tide Stage']
+            })
+          line_num += 1
+
+        if self.logger:
+          self.logger.debug("Processed %d lines." % (line_num))
     except (IOError,Exception) as e:
       if self.logger:
         self.logger.exception(e)
