@@ -2,6 +2,8 @@ import os
 import logging.config
 import time
 import json
+import geojson
+
 from wq_sites import wq_sample_sites
 def contains(list, filter):
   for x in list:
@@ -116,6 +118,11 @@ class wq_advisories_file:
         }
       }
     }
+    extents_json = None
+    if site.extents_geometry is not None:
+      extents_json = geojson.Feature(geometry=site.extents_geometry, properties={})
+      feature['properties']['extents_geometry'] = extents_json
+
     return feature
 
   def build_site_features(self, wq_samples):
@@ -200,6 +207,10 @@ class wq_station_advisories_file:
           }
         }
       }
+      extents_json = None
+      if self.sample_site.extents_geometry is not None:
+        extents_json = geojson.Feature(geometry=self.sample_site.extents_geometry, properties={})
+        feature['properties']['extents_geometry'] = extents_json
     try:
       if feature is not None:
         self.logger.debug("Creating file: %s" % (station_filename))
