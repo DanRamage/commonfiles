@@ -44,8 +44,8 @@ class wq_sample_sites(sampling_sites):
   def load_sites(self, **kwargs):
     if 'file_name' in kwargs:
       if 'boundary_file' in kwargs:
-        boundaries = geometry_list(use_logger=True)
-        boundaries.load(kwargs['boundary_file'])
+        wq_boundaries = geometry_list(use_logger=True)
+        wq_boundaries.load(kwargs['boundary_file'])
 
       try:
         header_row = ["WKT","EPAbeachID","SPLocation","Description","County","Boundary","ExtentsWKT"]
@@ -90,7 +90,7 @@ class wq_sample_sites(sampling_sites):
                 for boundary in boundaries:
                   if self.logger:
                     self.logger.debug("Sample site: %s Boundary: %s" % (row['SPLocation'], boundary))
-                  boundary_geometry = boundaries.get_geometry_item(boundary)
+                  boundary_geometry = wq_boundaries.get_geometry_item(boundary)
                   if add_site:
                     #Add the containing boundary
                     station.contained_by.append(boundary_geometry)
