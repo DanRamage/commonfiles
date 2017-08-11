@@ -75,8 +75,30 @@ class wq_advisories_file:
 
   def create_file(self, out_file_name, wq_samples):
     try:
+      current_sample_sites = wq_samples.keys()
+      with open(out_file_name, 'r') as station_json_file:
+        json_data = json.loads(station_json_file.read())
+        if 'features' in json_data:
+          features = json_data['features']
+          for feature in features:
+            properties = feature['properties']
+            station = properties['station']
+            if station in current_sample_sites:
+              if 'test' in properties:
+                properties['test']['beachadvisories'] = {
+                  'date': wq_samples[station][0].date_time.strftime('%Y-%m-%d %H:%M:%S'),
+                  'station': station,
+                  'value': wq_samples[station][0].value
+                }
+
+        else:
+          features = self.build_site_features(wq_samples)
+    except IOError as e:
+      self.logger.error("File: %s does not exist yet." % (out_file_name))
+      features = self.build_site_features(wq_samples)
+    try:
       with open(out_file_name, "w") as out_file_obj:
-        features = self.build_site_features(wq_samples)
+        #features = self.build_site_features(wq_samples)
         json_data = {
           'type': 'FeatureCollection',
           'features': features
