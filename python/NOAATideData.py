@@ -717,9 +717,9 @@ class noaaTideDataExt(noaaTideData):
     pda_tide_data = None
     try:
       if self.use_raw:
-        wlData = self.getWaterLevelRawSixMinuteDataExt(beginDate.strftime('%Y%m%d'), endDate.strftime('%Y%m%d'), station, datum, units, timezone)
+        wlData = self.getWaterLevelRawSixMinuteDataExt(beginDate.strftime('%Y%m%d %H:%M'), endDate.strftime('%Y%m%d %H:%M'), station, datum, units, timezone)
       else:
-        wlData = self.getWaterLevelVerifiedSixMinuteDataExt(beginDate.strftime('%Y%m%d'), endDate.strftime('%Y%m%d'), station, datum, units, timezone)
+        wlData = self.getWaterLevelVerifiedSixMinuteDataExt(beginDate.strftime('%Y%m%d %H:%M'), endDate.strftime('%Y%m%d %H:%M'), station, datum, units, timezone)
     except (WebFault, Exception) as e:
       if self.logger:
         self.logger.exception(e)
@@ -930,7 +930,8 @@ class noaaTideDataExt(noaaTideData):
                     datum='MLLW',
                     units='feet',
                     timezone='GMT',
-                    smoothData=False):
+                    smoothData=False,
+                    write_tide_data=False):
 
     #This is the dictionary we return. Its keys are the tide indicators: LL is Lowest Low Tide, L is Low Tide, HH Highest High Tide, H High tide.
     tideData = None
@@ -999,6 +1000,12 @@ class noaaTideDataExt(noaaTideData):
             }
         tide_stage = self.calc_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, True)
         pda_tide_data['tide_stage'] = tide_stage
+
+        if write_tide_data:
+          with open('/Users/danramage/tmp/tide_stage/%s.csv' % (endDate.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
+            for rec in data_start_tag:
+              tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
+
       except Exception as e:
         if self.logger:
           self.logger.exception(e)
