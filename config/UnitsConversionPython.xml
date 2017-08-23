@@ -3,6 +3,11 @@
   <!-- below are the unit conversions % ( mainly going from si(metric)) to en(english)) units -->
   <!-- be sure to include unit self (e.g. % ( m_to_m)) conversion reference which also acts as a data formatting statement -->
 
+  <unit_conversion id="ft_s-1_to_m_s-1">
+    <conversion_formula>("%f" % (var1*0.3048))</conversion_formula>
+    <units>%</units>
+  </unit_conversion>
+
   <unit_conversion id="percent_to_percent">
     <conversion_formula>("%.1f" % (var1))</conversion_formula>
     <units>%</units>
