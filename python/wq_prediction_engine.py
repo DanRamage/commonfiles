@@ -8,6 +8,11 @@ import time
 from data_collector_plugin import data_collector_plugin
 import ConfigParser
 
+class data_result_types:
+  NO_TYPE = 0
+  SAMPLING_DATA_TYPE = 1
+  MODEL_DATA_TYPE = 2
+
 class wq_prediction_engine(object):
   def __init__(self):
     self.logger = logging.getLogger(__name__)
