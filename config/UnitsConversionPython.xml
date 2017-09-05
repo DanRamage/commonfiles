@@ -129,6 +129,11 @@
     <units>ft</units>
   </unit_conversion>
 
+  <unit_conversion id="uS_cm-1_to_mS_cm-1">
+    <conversion_formula>("%.4f" % (var1*0.001))</conversion_formula>
+    <units>mS/cm</units>
+  </unit_conversion>
+
   <unit_conversion id="mS_cm-1_to_mS_cm-1">
     <conversion_formula>("%.2f" % (var1))</conversion_formula>
     <units>mS/cm</units>
