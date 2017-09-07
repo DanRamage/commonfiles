@@ -139,6 +139,11 @@
     <units>mS/cm</units>
   </unit_conversion>
 
+  <unit_conversion id="mS_cm-1_to_uS_cm-1">
+    <conversion_formula>("%f" % (var1*1000))</conversion_formula>
+    <units>uS/cm</units>
+  </unit_conversion>
+
   <unit_conversion id="psu_to_psu">
     <conversion_formula>("%.2f" % (var1))</conversion_formula>
     <units>psu</units>
