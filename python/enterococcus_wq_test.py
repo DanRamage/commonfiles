@@ -310,6 +310,9 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
           try:
             self.mlrResult = sym_expr.evalf(subs=mlr_symbols, n=4)
             self.mlrResult = int(self.mlrResult + 0.5)
+            if self.mlrResult < 0:
+              self.mlrResult = 0
+              self.logger.debug("Model: %s negative, resetting to 0" % (self.model_name))
             if self.logger:
               self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.mlrResult, self.data_used))
             self.categorize_result()
@@ -331,5 +334,4 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
     else:
       self.logger.debug("Test: %s not enabled." % (self.model_name))
       self.predictionLevel.value = predictionLevels.DISABLED
-
     return self.predictionLevel.value

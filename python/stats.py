@@ -39,7 +39,11 @@ class stats(object):
     self.items.append(value)
 
   def calc_geometric_mean(self, values):
-    return (reduce(operator.mul, values)) ** (1.0/len(values))
+    try:
+      geo_mean = (reduce(operator.mul, values)) ** (1.0/len(values))
+    except ValueError as e:
+      geo_mean = None
+    return geo_mean
 
   def getValueAtPercentile(self, percentile,linearInterpolate=False):
     value = None
