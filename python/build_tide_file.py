@@ -61,7 +61,7 @@ def get_tide_data(**kwargs):
                              units='feet',
                              timezone='GMT',
                              smoothData=False,
-                             write_tide_data=True)
+                             write_tide_data=False)
 
           '''
           tide_stage = tide.get_tide_stage(begin_date = tide_start_time,
