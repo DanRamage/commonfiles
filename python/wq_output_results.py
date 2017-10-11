@@ -83,13 +83,24 @@ class wq_advisories_file:
           for feature in features:
             properties = feature['properties']
             station = properties['station']
+            site_nfo = None
+            for site in self.sample_sites:
+              if site.name == station:
+                site_nfo = site
+                break
             if station in current_sample_sites:
+              wq_samples[station].sort(key=lambda x: x.date_time, reverse=False)
+
               if 'test' in properties:
                 properties['test']['beachadvisories'] = {
-                  'date': wq_samples[station][0].date_time.strftime('%Y-%m-%d %H:%M:%S'),
+                  'date': wq_samples[station][-1].date_time.strftime('%Y-%m-%d %H:%M:%S'),
                   'station': station,
-                  'value': wq_samples[station][0].value
+                  'value': wq_samples[station][-1].value
                 }
+                if site_nfo is not None and site_nfo.extents_geometry is not None:
+                  extents_json = geojson.Feature(geometry=site.extents_geometry, properties={})
+                  feature['properties']['extents_geometry'] = extents_json
+
 
         else:
           features = self.build_site_features(wq_samples)
