@@ -606,11 +606,12 @@ class noaaTideData(object):
     except Exception, e:
       if self.logger:
         self.logger.exception(e)
+    """        
     if write_tide_data:
       with open('/Users/danramage/tmp/florida_data/tide_stage_data/%s.csv' % (end_date.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
         for rec in tide_recs:
           tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
-
+    """
     return tide_stage
 
 
@@ -916,11 +917,12 @@ class noaaTideDataExt(noaaTideData):
         if self.logger:
           self.logger.exception(e)
 
+      """
       if write_tide_data:
         with open('/Users/danramage/tmp/%s.csv' % (endDate.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
           for rec in data_start_tag:
             tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
-
+      """
     return(tideData,pda_tide_data)
 
   def calcTideRangePeakDetect(self,
@@ -1000,12 +1002,12 @@ class noaaTideDataExt(noaaTideData):
             }
         tide_stage = self.calc_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, False)
         pda_tide_data['tide_stage'] = tide_stage
-
+        """
         if write_tide_data:
           with open('/Users/danramage/tmp/tide_stage/%s.csv' % (endDate.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
             for rec in data_start_tag:
               tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
-
+        """
       except Exception as e:
         if self.logger:
           self.logger.exception(e)
@@ -1110,6 +1112,7 @@ class noaaTideDataExt(noaaTideData):
       if self.logger:
         self.logger.exception(e)
 
+    """
     if write_tide_stage_debug:
       try:
         with open('/Users/danramage/tmp/tide_stage/%s.csv' % (end_date.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
@@ -1119,7 +1122,7 @@ class noaaTideDataExt(noaaTideData):
       except IOError as e:
         if self.logger:
           self.logger.exception(e)
-
+    """
     return tide_stage
 
   def get_tide_stage(self, begin_date,
@@ -1239,12 +1242,12 @@ class noaaTideDataExt(noaaTideData):
     except Exception, e:
       if self.logger:
         self.logger.exception(e)
-
+    """
     if write_tide_data:
       with open('/Users/danramage/tmp/florida_data/tide_stage_data/%s.csv' % (end_date.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
         for rec in tide_recs:
           tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
-
+    """
     return tide_data
 
 
