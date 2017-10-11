@@ -998,7 +998,7 @@ class noaaTideDataExt(noaaTideData):
               'value': data_start_tag[int(mins[max_len-1][0])]['WL'],
               'date':  data_start_tag[int(mins[max_len-1][0])]['timeStamp']
             }
-        tide_stage = self.calc_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, True)
+        tide_stage = self.calc_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, False)
         pda_tide_data['tide_stage'] = tide_stage
 
         if write_tide_data:
