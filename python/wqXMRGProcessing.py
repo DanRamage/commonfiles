@@ -13,6 +13,12 @@ from pytz import timezone
 import requests
 from multiprocessing import Process, Queue, current_process
 
+import httplib2
+from apiclient import discovery
+from oauth2client.file import Storage
+from googleapiclient.http import MediaIoBaseDownload
+import io
+
 from shapely.geometry import Polygon
 from shapely.wkt import loads as wkt_loads
 
@@ -499,6 +505,7 @@ class wqXMRGProcessing(object):
         self.logger.error("No XMRG file extension given, defaultin to: %s" % (self.xmrg_file_ext))
         self.logger.exception(e)
 
+    self.use_http_file_pull = True
     #See if we are getting from sftp site and not a web accessible directory.
     try:
 
@@ -510,6 +517,8 @@ class wqXMRGProcessing(object):
         self.logger.debug("Use sftp: %s" % (self.sftp))
       self.sftp_base_directory = configFile.get('nexrad_database', 'sftp_base_directory')
       if self.sftp:
+        self.use_http_file_pull = False
+
         pwd_file = configFile.get('nexrad_database', 'sftp_password_file')
         pwd_config_file = ConfigParser.RawConfigParser()
         pwd_config_file.read(pwd_file)
@@ -519,6 +528,24 @@ class wqXMRGProcessing(object):
     except (ConfigParser.Error, Exception) as e:
       if self.logger:
         self.logger.exception(e)
+
+    #Check to see if we're getting files from google drive
+    try:
+      self.use_google_drive = False
+      self.use_google_drive = configFile.getboolean('nexrad_database', 'use_google_drive')
+      if self.use_google_drive:
+        self.use_http_file_pull = False
+        self.logger.debug("Downloading from google drive.")
+        google_setup_file = configFile.get('nexrad_database', 'google_setup_file')
+        google_cfg_file = ConfigParser.RawConfigParser()
+        google_cfg_file.read(google_setup_file)
+        self.google_credentials_json = google_cfg_file.get('google_drive', 'credentials_file')
+        self.google_folder_id = google_cfg_file.get('google_drive', 'xmrg_folder_id')
+        self.logger.debug("Google folder id: %s Credentials file: %s" % (self.google_folder_id, self.google_credentials_json))
+    except (ConfigParser.Error, Exception) as e:
+      if self.logger:
+        self.logger.exception(e)
+
     #Process the boundaries
     try:
       header_row = ["WKT", "NAME"]
@@ -884,6 +911,26 @@ class wqXMRGProcessing(object):
           self.logger.error("Unable to download file: %s" % (remote_filename_url))
     return None
 
+  def google_drive_download_file(self, **kwargs):
+    file_path = None
+    xmrg_file_name = kwargs['file_name']
+    for file_info in kwargs['google_file_list']:
+      if file_info['name'] == xmrg_file_name:
+        start_time = time.time()
+        print("Google Drive Downloading file: %s" % (file_info['name']))
+        file_path = os.path.join(self.xmrgDLDir, file_info['name'])
+        file_res = self.google_drive.files().get_media(fileId=file_info['id'])
+        fh = io.FileIO(file_path, 'wb')
+        downloader = MediaIoBaseDownload(fh, file_res)
+        done = False
+        while done is False:
+          status, done = downloader.next_chunk()
+
+        self.logger.debug("Google Drive file: %s dl'd in %f seconds." % (file_path, time.time() - start_time))
+        break
+
+
+    return file_path
   def sftp_download_file(self, **kwargs):
     start_time = time.time()
 
@@ -913,46 +960,32 @@ class wqXMRGProcessing(object):
       ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
       ssh.connect(self.baseURL, username=self.sftp_user, password=self.sftp_password)
       ftp = ssh.open_sftp()
+    elif self.use_google_drive:
+      store = Storage(self.google_credentials_json)
+      google_drive_credentials = store.get()
+      http = google_drive_credentials.authorize(httplib2.Http())
+      self.google_drive = discovery.build('drive', 'v3', http=http)
+
+      google_drive_file_list = self.google_drive.files().list(q="'%s' in parents" % (self.google_folder_id)).execute().get('files')
+      self.logger.debug("Google Drive folder file list query returned: %d recs" % (len(google_drive_file_list)))
 
     for file_name in file_list:
-      if not self.sftp:
+      if self.use_http_file_pull:
         dl_filename = self.http_download_file(file_name)
-        if dl_filename is not None:
-          files_downloaded.append(dl_filename)
       else:
-        try:
-          dl_filename = self.sftp_download_file(file_name=file_name,
-                                                ftp_obj=ftp)
-          files_downloaded.append(dl_filename)
-        except Exception as e:
-          if self.logger:
-            self.logger.exception(e)
-      """
-      remote_filename_url = os.path.join(self.baseURL, file_name)
-      if self.logger:
-        self.logger.debug("Downloading file: %s" % (remote_filename_url))
-      try:
-        r = requests.get(remote_filename_url, stream=True)
-      except (requests.HTTPError, requests.ConnectionError) as e:
-        if self.logger:
-          self.logger.exception(e)
-      else:
-        if r.status_code == 200:
-          dest_file = os.path.join(self.xmrgDLDir, file_name)
-          if self.logger:
-            self.logger.debug("Saving to file: %s" % (dest_file))
+        if self.sftp:
           try:
-            with open(dest_file, 'wb') as xmrg_file:
-              for chunk in r:
-                xmrg_file.write(chunk)
-          except IOError,e:
+            dl_filename = self.sftp_download_file(file_name=file_name,
+                                                  ftp_obj=ftp)
+          except Exception as e:
             if self.logger:
               self.logger.exception(e)
-          files_downloaded.append(dest_file)
-        else:
-          if self.logger:
-            self.logger.error("Unable to download file: %s" % (remote_filename_url))
-        """
+        elif self.use_google_drive:
+          dl_filename = self.google_drive_download_file(file_name=file_name,
+                                                        google_file_list=google_drive_file_list)
+      if dl_filename is not None:
+        files_downloaded.append(dl_filename)
+
     return files_downloaded
 
   def download_range(self, start_date, hour_count):
