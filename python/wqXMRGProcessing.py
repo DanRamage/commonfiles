@@ -966,9 +966,19 @@ class wqXMRGProcessing(object):
       http = google_drive_credentials.authorize(httplib2.Http())
       self.google_drive = discovery.build('drive', 'v3', http=http)
 
-      google_drive_file_list = self.google_drive.files().list(q="'%s' in parents" % (self.google_folder_id)).execute().get('files')
-      self.logger.debug("Google Drive folder file list query returned: %d recs" % (len(google_drive_file_list)))
-
+      #Check if we have to keep requesting pages to get all files.
+      pageToken = ''
+      get_next_page = True
+      google_drive_file_list = []
+      while get_next_page == True:
+        google_req = self.google_drive.files().list(q="'%s' in parents" % (self.google_folder_id),pageSize=100, pageToken=pageToken).execute()
+        google_drive_file_list.extend(google_req.get('files'))
+        self.logger.debug("Google Drive folder file list query returned: %d recs" % (len(google_drive_file_list)))
+        if 'nextPageToken' in google_req and len(google_req['nextPageToken']):
+          self.logger.debug("Google Drive reports more files to pull.")
+          pageToken = google_req['nextPageToken']
+        else:
+          get_next_page = False
     for file_name in file_list:
       if self.use_http_file_pull:
         dl_filename = self.http_download_file(file_name)
