@@ -47,9 +47,10 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         Append the record. If shouldFlush() tells us to, call flush() to process
         the buffer.
         """
-        self.buffer.append(record)
-        if self.shouldFlush(record):
-            self.flush()
+        if record.levelno >= self.level:
+            self.buffer.append(record)
+            if self.shouldFlush(record):
+                self.flush()
 
     def flush(self):
         if len(self.buffer) > 0:
