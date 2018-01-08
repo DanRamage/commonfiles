@@ -22,7 +22,8 @@ class data_collector_plugin(IPlugin, Process):
     self.logger_name = self.__class__.__name__
     logger = logging.getLogger(self.logger_name)
     logger_handlers = logger.handlers
-    self.log_listener = QueueListener(self.log_queue, *logger_handlers)
+    h1,h2 = logger_handlers[0],logger_handlers[1]
+    self.log_listener = QueueListener(self.log_queue, h1, h2)
     self.log_listener.start()
     #queue_handler = QueueHandler(self.log_queue)
     self.logging_client_cfg = {
@@ -38,7 +39,13 @@ class data_collector_plugin(IPlugin, Process):
       'loggers': {
         '': {
           'handlers': ['default'],
-          'level': 'DEBUG'
+          'level': 'DEBUG',
+          'propagate': False
+        },
+        self.logger_name: {
+          'handlers': ['default'],
+          'level': 'DEBUG',
+          'propagate': False
         }
       }
     }
