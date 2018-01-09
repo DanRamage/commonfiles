@@ -1,9 +1,8 @@
 import logging.config
 
 from yapsy.IPlugin import IPlugin
-from multiprocessing import Process, Queue, Event
-from logutils.queue import QueueHandler, QueueListener
-from multi_process_logging import queue_listener_process
+from multiprocessing import Process, Queue
+from logutils.queue import QueueListener
 
 class data_collector_plugin(IPlugin, Process):
   def __init__(self):
@@ -22,10 +21,8 @@ class data_collector_plugin(IPlugin, Process):
     self.logger_name = self.__class__.__name__
     logger = logging.getLogger(self.logger_name)
     logger_handlers = logger.handlers
-    h1,h2 = logger_handlers[0],logger_handlers[1]
-    self.log_listener = QueueListener(self.log_queue, h1, h2)
+    self.log_listener = QueueListener(self.log_queue, *logger_handlers)
     self.log_listener.start()
-    #queue_handler = QueueHandler(self.log_queue)
     self.logging_client_cfg = {
       'version': 1,
       'disable_existing_loggers': False,
