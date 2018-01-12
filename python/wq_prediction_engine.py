@@ -58,6 +58,8 @@ class wq_prediction_engine(object):
     self.logger.info("Waiting for %d plugins to complete." % (plugin_cnt))
     for plugin in simplePluginManager.getAllPlugins():
       plugin.plugin_object.join()
+      plugin.plugin_object.finalize()
+
     self.logger.info("%d Plugins completed in %f seconds" % (plugin_cnt, time.time() - plugin_start_time))
 
 
