@@ -86,14 +86,15 @@ class wq_sample_sites(sampling_sites):
                 self.logger.debug("Processing sample site: %s" % (row['SPLocation']))
               self.append(station)
               try:
-                boundaries = row['Boundary'].split(',')
-                for boundary in boundaries:
-                  if self.logger:
-                    self.logger.debug("Sample site: %s Boundary: %s" % (row['SPLocation'], boundary))
-                  boundary_geometry = wq_boundaries.get_geometry_item(boundary)
-                  if add_site:
-                    #Add the containing boundary
-                    station.contained_by.append(boundary_geometry)
+                if len(row['Boundary']):
+                  boundaries = row['Boundary'].split(',')
+                  for boundary in boundaries:
+                    if self.logger:
+                      self.logger.debug("Sample site: %s Boundary: %s" % (row['SPLocation'], boundary))
+                    boundary_geometry = wq_boundaries.get_geometry_item(boundary)
+                    if add_site:
+                      #Add the containing boundary
+                      station.contained_by.append(boundary_geometry)
               except AttributeError as e:
                 self.logger.exception(e)
           line_num += 1

@@ -37,7 +37,26 @@ def closestCellFromPt(lon, lat, lonArray, latArray, obsArray, obsFillValue, land
           lastDistance = curDist
           cellPoint = Point(i,j)
       
-  return(cellPoint)  
+  return(cellPoint)
+
+
+def closestLonLatFromPt(lon, lat, lonArray, latArray, obsArray, obsFillValue, landMaskArray):
+  latlon = Point(lon, lat)
+  lastDistance = None
+  cellPoint = None
+  points = np.vstack((lonArray.flatten(), latArray.flatten())).T
+  flat_land_mask = landMaskArray.flatten()
+  flat_obs = obsArray.flatten()
+  for ndx, pt in enumerate(points):
+    if flat_land_mask[ndx] == 1 and flat_obs[ndx] != obsFillValue:
+      gridPt = Point(pt[0], pt[1])
+      curDist = latlon.distance(gridPt)
+      if (lastDistance == None or curDist < lastDistance):
+        lastDistance = curDist
+        cellPoint = Point(pt[0], pt[1])
+
+  return (cellPoint)
+
 
 def closestCellFromPtInPolygon(lon_lat, lon_array, lat_array, obs_array, fill_value, containing_polygon):
   cell_point = None

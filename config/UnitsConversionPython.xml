@@ -83,6 +83,11 @@
     <units>knots</units>
   </unit_conversion>
 
+  <unit_conversion id="knots_to_m_s-1">
+    <conversion_formula>("%.1f" % (var1*0.514444))</conversion_formula>
+    <units>knots</units>
+  </unit_conversion>
+
   <unit_conversion id="cm_s-1_to_knots">
     <conversion_formula>("%.1f" % (var1*.019438))</conversion_formula>
     <units>knots</units>
@@ -101,6 +106,11 @@
 
   <unit_conversion id="millimeter_to_millimeter">
     <conversion_formula>("%.1f" % (var1))</conversion_formula>
+    <units>mm</units>
+  </unit_conversion>
+
+  <unit_conversion id="inch_to_millimeter">
+    <conversion_formula>("%.2f" % (var1*25.4))</conversion_formula>
     <units>mm</units>
   </unit_conversion>
 
