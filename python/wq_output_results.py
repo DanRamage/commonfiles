@@ -80,12 +80,14 @@ class wq_advisories_file:
         json_data = json.loads(station_json_file.read())
         if 'features' in json_data:
           for site in self.sample_sites:
+            self.logger.debug("Searching for site: %s in json data" % (site.name))
             site_found = False
             features = json_data['features']
             for feature in features:
               properties = feature['properties']
               station = properties['station']
               if site.name == station:
+                self.logger.debug("Found site: %s" % (site.name))
                 site_found = True
                 site_nfo = site
                 """
@@ -95,6 +97,7 @@ class wq_advisories_file:
                     break
                 """
                 if station in current_sample_sites:
+                  self.logger.debug("Adding data for site: %s" % (site.name))
                   wq_samples[station].sort(key=lambda x: x.date_time, reverse=False)
 
                   if 'test' in properties:
@@ -103,14 +106,20 @@ class wq_advisories_file:
                       'station': station,
                       'value': wq_samples[station][-1].value
                     }
-                if site_nfo is not None and site_nfo.extents_geometry is not None:
-                  extents_json = geojson.Feature(geometry=site.extents_geometry, properties={})
-                  feature['properties']['extents_geometry'] = extents_json
+
+                break
+            if site_nfo is not None:
+              if site_nfo is not None and site_nfo.extents_geometry is not None:
+                self.logger.debug("Adding extents for site: %s" % (site.name))
+                extents_json = geojson.Feature(geometry=site.extents_geometry, properties={})
+                feature['properties']['extents_geometry'] = extents_json
 
             if not site_found:
+              self.logger.debug("Site: %s not found, building feature" % (site.name))
               feature = self.build_feature(site, "", [])
               features.append(feature)
         else:
+          self.logger.debug("Features not found in json data, building")
           features = self.build_site_features(wq_samples)
     except IOError as e:
       self.logger.error("File: %s does not exist yet." % (out_file_name))
@@ -122,6 +131,8 @@ class wq_advisories_file:
           'type': 'FeatureCollection',
           'features': features
         }
+        self.logger.debug("Writing json file: %s" % (out_file_name))
+
         out_file_obj.write(json.dumps(json_data, sort_keys=True))
     except (IOError, Exception) as e:
       self.logger.exception(e)
