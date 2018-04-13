@@ -79,29 +79,37 @@ class wq_advisories_file:
       with open(out_file_name, 'r') as station_json_file:
         json_data = json.loads(station_json_file.read())
         if 'features' in json_data:
-          features = json_data['features']
-          for feature in features:
-            properties = feature['properties']
-            station = properties['station']
-            site_nfo = None
-            for site in self.sample_sites:
+          for site in self.sample_sites:
+            site_found = False
+            features = json_data['features']
+            for feature in features:
+              properties = feature['properties']
+              station = properties['station']
               if site.name == station:
+                site_found = True
                 site_nfo = site
-                break
-            if station in current_sample_sites:
-              wq_samples[station].sort(key=lambda x: x.date_time, reverse=False)
+                """
+                for site in self.sample_sites:
+                  if site.name == station:
+                    site_nfo = site
+                    break
+                """
+                if station in current_sample_sites:
+                  wq_samples[station].sort(key=lambda x: x.date_time, reverse=False)
 
-              if 'test' in properties:
-                properties['test']['beachadvisories'] = {
-                  'date': wq_samples[station][-1].date_time.strftime('%Y-%m-%d %H:%M:%S'),
-                  'station': station,
-                  'value': wq_samples[station][-1].value
-                }
+                  if 'test' in properties:
+                    properties['test']['beachadvisories'] = {
+                      'date': wq_samples[station][-1].date_time.strftime('%Y-%m-%d %H:%M:%S'),
+                      'station': station,
+                      'value': wq_samples[station][-1].value
+                    }
                 if site_nfo is not None and site_nfo.extents_geometry is not None:
                   extents_json = geojson.Feature(geometry=site.extents_geometry, properties={})
                   feature['properties']['extents_geometry'] = extents_json
 
-
+            if not site_found:
+              feature = self.build_feature(site, "", [])
+              features.append(feature)
         else:
           features = self.build_site_features(wq_samples)
     except IOError as e:
