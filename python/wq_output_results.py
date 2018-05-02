@@ -109,6 +109,10 @@ class wq_advisories_file:
 
                 break
             if site_nfo is not None:
+              #Update the description fields since we might modify them
+              #from time to time, otherwise have to hand edit the json files.
+              properties['locale'] = site_nfo.description
+              properties['desc'] = site_nfo.description
               if site_nfo is not None and site_nfo.extents_geometry is not None:
                 self.logger.debug("Adding extents for site: %s" % (site.name))
                 extents_json = geojson.Feature(geometry=site.extents_geometry, properties={})
