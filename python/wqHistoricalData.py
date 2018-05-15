@@ -96,24 +96,28 @@ class geometry_list(list):
     header_row = ["WKT", "NAME"]
     try:
       geometry_file = open(file_name, "rU")
-      if self.logger:
-        self.logger.debug("Open boundary file: %s" % (file_name))
-      dict_file = csv.DictReader(geometry_file, delimiter=',', quotechar='"', fieldnames=header_row)
+    except (IOError, Exception) as e:
+      self.logger.exception(e)
+    else:
+      try:
+        if self.logger:
+          self.logger.debug("Open boundary file: %s" % (file_name))
+        dict_file = csv.DictReader(geometry_file, delimiter=',', quotechar='"', fieldnames=header_row)
 
-      line_num = 0
-      for row in dict_file:
-        if line_num > 0:
-          if self.logger:
-            self.logger.debug("Building boundary polygon for: %s" % (row['NAME']))
-          self.append(item_geometry(row['NAME'], row['WKT']))
-        line_num += 1
+        line_num = 0
+        for row in dict_file:
+          if line_num > 0:
+            if self.logger:
+              self.logger.debug("Building boundary polygon for: %s" % (row['NAME']))
+            self.append(item_geometry(row['NAME'], row['WKT']))
+          line_num += 1
 
-      return True
+        return True
 
-    except (IOError,Exception) as e:
-      if self.logger:
-        self.logger.error("Geometry creation issue on line: %d" % (line_num))
-        self.logger.exception(e)
+      except (IOError,Exception) as e:
+        if self.logger:
+          self.logger.error("Geometry creation issue on line: %d" % (line_num))
+          self.logger.exception(e)
 
     return False
 
@@ -191,14 +195,30 @@ class tide_data_file_ex(dict):
         line_num = 0
         for row in data_csv:
           if line_num:
+            range = None
+            if len(row['Range']):
+              range = float(row['Range'])
+
+            hh = None
+            if len(row['HH']):
+              hh = float(row['HH'])
+
+            ll = None
+            if len(row['LL']):
+              ll = float(row['LL'])
+
+            tide_stage = None
+            if len(row['Tide Stage']):
+              tide_stage = int(row['Tide Stage'])
+
             self.__setitem__(row['Date'], {
               'station': row['Station'],
-              'range': row['Range'],
-              'hh': row['HH'],
+              'range': range,
+              'hh':hh,
               'hh_date': row['HH Date'],
-              'll': row['LL'],
+              'll': ll,
               'll_date': row['LL Date'],
-              'tide_stage': row['Tide Stage']
+              'tide_stage': tide_stage
             })
           line_num += 1
 
