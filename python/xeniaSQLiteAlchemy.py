@@ -19,6 +19,8 @@ from sqlalchemy.orm.exc import *
 #from geoalchemy import *
 #from geoalchemy2 import Geometry
 import logging.config
+from datetime import datetime
+from stats import vectorMagDir
 
 Base = declarative_base()
 
@@ -33,7 +35,7 @@ class organization(Base):
   description      = Column(String(1000))    
   url              = Column(String(200))      
   opendap_url      = Column(String(200))      
-  email_tech       = Column(String(150))                     
+  #email_tech       = Column(String(150))
 
 class collection_type(Base):
   __tablename__ = 'collection_type'
@@ -639,7 +641,6 @@ class xeniaAlchemy(object):
     except NoResultFound, e:
       if(self.logger != None):
         self.logger.debug("Observation: %s does not exist in obs_type table." % (obsName))
-      rowId = -1
     except exc.InvalidRequestError, e:
       if(self.logger != None):
         self.logger.exception(e)
@@ -692,7 +693,6 @@ class xeniaAlchemy(object):
     except NoResultFound, e:
       if(self.logger != None):
         self.logger.debug("UOM: %s does not exist in obs_type table." % (uomName))
-      rowId = -1  
     except exc.InvalidRequestError, e:
       if(self.logger != None):
         self.logger.exception(e)
@@ -749,7 +749,6 @@ class xeniaAlchemy(object):
     except NoResultFound, e:
       if(self.logger != None):
         self.logger.debug("Scalar type for obs_type_id: %d uom_type_id: %d does not exist in m_scalar_type table." %(obsTypeID, uomTypeID))
-      rowId = -1  
     except exc.InvalidRequestError, e:
       if(self.logger != None):
         self.logger.exception(e)
@@ -862,6 +861,310 @@ class xeniaAlchemy(object):
 
   def addSensor(self, sensorRec, commit=False):
     return(self.addRec(sensorRec, commit))
-    
+
+
+  def buildMinimalPlatform(self, platform_name, observation_list):
+    name_parts = platform_name.split('.')
+    org_id = self.organizationExists(name_parts[0])
+    row_entry_date = datetime.now()
+    if org_id is None:
+      if self.logger:
+        self.logger.debug("Adding organization name: %s" % (name_parts[0]))
+      org_id = self.addOrganization(row_entry_date, name_parts[0])
+
+    if self.platformExists(platform_name) is None:
+      if self.logger:
+        self.logger.debug("Adding platform handle: %s" % (platform_name))
+      plat_rec = platform(row_entry_date=row_entry_date,
+                          organization_id=org_id,
+                          platform_handle=platform_name,
+                          short_name=name_parts[1],
+                          active=1)
+      platform_id = self.addRec(plat_rec, True)
+    for obs_info in observation_list:
+
+      if self.logger:
+        self.logger.debug("Platform: %s adding sensor: %s(%s)" % (platform_name, obs_info['obs_name'], obs_info['uom_name']))
+      try:
+        if self.addNewSensor(obs_info['obs_name'], obs_info['uom_name'],
+                                platform_name,
+                                1,
+                                0,
+                                obs_info['s_order'],
+                                None,
+                                True) is None:
+          if self.logger:
+            self.logger.error("Error platform: %s sensor: %s(%s) not added" % (
+            platform_name, obs_info['obs_name'], obs_info['uom_name']))
+      except Exception as e:
+        self.logger.exception(e)
+
+  def addNewSensor(self, obs_name, uom, platform_handle, active=1, fixed_z=0, s_order=1, m_type_id=None, add_obs_and_uom=False):
+
+    # If the sensor already exists, we're done.
+    id = self.sensorExists(obs_name, uom, platform_handle, s_order)
+    if id != None:
+      return (id)
+
+    row_entry_date = datetime.now()
+    # If the mTypeID is passed in, we already have a complete set of obs ids, uoms, scalar types.
+    if m_type_id == None:
+      obs_type_id = self.obsTypeExists(obs_name)
+      if obs_type_id is None:
+        if add_obs_and_uom:
+          obs_type_id = self.addObsType(obs_name)
+          # Error occured so return.
+          if obs_type_id is None:
+            raise Exception("Unable to add obs_type: %s" % (obs_name))
+        # If we do not want to add a missing observation type, we must error out.
+        else:
+          raise Exception("obs_type: %s does not exist. Must be added to obs_type table." % (obsName))
+      elif obs_type_id is None:
+        raise Exception("obs_type.standard_name: %s does not exist." % (obs_name))
+
+      # Now let's check if our UOM exists.
+      uom_type_id = self.uomTypeExists(uom)
+      if uom_type_id is None:
+        if add_obs_and_uom:
+          uom_type_id = self.addUOMType(uom)
+          # Error occured so return.
+          if uom_type_id is None:
+            raise Exception("Unable to add uom_type: %s" % (uom))
+        # If we do not want to add a missing uom type, we must error out.
+        else:
+          raise Exception("uom_type: %s does not exist. Must be added to uom_type table." % (uom))
+      elif uom_type_id is None:
+        raise Exception("uom_type.standard_name: %s does not exist." % (uom))
+
+      # Now check the scalar type.
+      scalar_id = self.scalarTypeExists(obs_type_id, uom_type_id)
+      if scalar_id is None:
+        scalar_id = self.addScalarType(obs_type_id, uom_type_id)
+        # Error occured so return.
+        if scalar_id is None:
+          raise Exception("Unable to add scalar_type with obs_type_id: %d and uom_type_id: %d" % (
+                          scalar_id, uom_type_id))
+      elif scalar_id is None:
+        return None
+
+      # Now we need to add a new m_type
+      m_type_id = self.mTypeExists(obs_name, uom)
+      if m_type_id is None:
+        m_type_id = self.addMType(scalar_id)
+        # Error occured so return.
+        if m_type_id is None:
+          raise Exception("Unable to add m_type with scalar_type_id: %d" % (scalarID))
+      elif m_type_id is None:
+        return None
+
+    # Now we can finally add the sensor to the sensor table.
+    platform_id = self.platformExists(platform_handle)
+    if platform_id is not None:
+      sensor_rec = sensor(row_entry_date = row_entry_date,
+                         platform_id = platform_id,
+                         m_type_id = m_type_id,
+                         short_name = obs_name,
+                         fixed_z = fixed_z,
+                         active = active,
+                         s_order = s_order)
+      sensor_id = self.addRec(sensor_rec, True)
+      if sensor_id is not None:
+        self.logger.debug("Added sensor: %s(%s) sOrder: %d on platform: %d" % (obs_name, uom, s_order, platform_id))
+        return sensor_id
+      else:
+        raise Exception("Unable to add sensor: %s(%s)." % (obs_name, uom))
+
+
+    else:
+      raise Exception("Platform: %s does not exist. Cannot add sensor." % (platform_handle))
+
+    return None
+
+  """
+  Function: calcAvgWindSpeedAndDir
+  Purpose: Wind direction is measured from 0-360 degrees, so around the inflection point trying to do an average can
+  have bad results. For instance 250 degrees and 4 degrees are roughly in the same direction, but doing a straight
+  average will result in something nowhere near correct. This function takes the speed and direction and converts
+  to a vector.
+  Parameters:
+    platName - String representing the platform name to query
+    startDate the date/time to start the average
+    endDate the date/time to stop the average
+  Returns:
+    A tuple setup to contain [0][0] = the vector speed and [0][1] direction average
+      [1][0] - Scalar speed average [1][1] - vector direction average with unity speed used.
+  """
+  """
+  def calcAvgWindSpeedAndDir(self, platName, wind_speed_obsname, wind_speed_uom, wind_dir_obsname, wind_dir_uom, start_date, end_date):
+    windComponents = []
+    dirComponents = []
+    vectObj = vectorMagDir();
+    #Get the wind speed and direction so we can correctly average the data.
+    #Get the sensor ID for the obs we are interested in so we can use it to query the data.
+    #windSpdId = xeniaSQLite.sensorExists(self, wind_speed_obsname, wind_speed_uom, platName)
+    #windDirId = xeniaSQLite.sensorExists(self, wind_dir_obsname, wind_dir_uom, platName)
+    m_wind_speed_id = self.sensorExists(wind_speed_obsname, wind_speed_uom, platName)
+    m_wind_dir_id = self.sensorExists(wind_dir_obsname, wind_dir_uom, platName)
+    if m_wind_speed_id is not None and \
+      m_wind_dir_id is not None:
+
+      try:
+        wnd_spd_recs = self.session.query(multi_obs)\
+          .filter(multi_obs.sensor_id == m_wind_speed_id)\
+          .filter(multi_obs.m_date >= start_date)\
+          .filter(multi_obs.m_date < end_date)\
+          .all()
+        wnd_dir_recs = self.session.query(multi_obs)\
+          .filter(multi_obs.sensor_id == m_wind_dir_id)\
+          .filter(multi_obs.m_date >= start_date)\
+          .filter(multi_obs.m_date < end_date)\
+          .all()
+      except Exception as e:
+        self.logger.exception(e)
+      else:
+        scalarSpd = None
+        spdCnt = 0
+        for spdRow in wnd_spd_recs:
+          if scalarSpd == None:
+            scalarSpd = 0
+          scalarSpd += spdRow.m_value
+          spdCnt += 1
+          for dirRow in wnd_dir_recs:
+            if spdRow.m_date == dirRow.m_date:
+              if self.logger:
+                self.logger.debug("Calculating vector for Speed(%s): %f Dir(%s): %f" % (spdRow.m_date, spdRow.m_value, dirRow.m_date, dirRow.m_value))
+              #Vector using both speed and direction.
+              windComponents.append(vectObj.calcVector(spdRow.m_value, dirRow.m_value))
+              #VEctor with speed as constant(1), and direction.
+              dirComponents.append(vectObj.calcVector(1, dirRow.m_value))
+              break
+        #Get our average on the east and north components of the wind vector.
+        spdAvg = None
+        dirAvg = None
+        scalarSpdAvg = None
+        vectorDirAvg = None
+
+        #If we have the direction only components, this is unity speed with wind direction, calc the averages.
+        if len(dirComponents):
+          eastCompAvg = 0
+          northCompAvg = 0
+          scalarSpdAvg = scalarSpd / spdCnt
+
+          for vectorTuple in dirComponents:
+            eastCompAvg += vectorTuple[0]
+            northCompAvg += vectorTuple[1]
+
+          eastCompAvg = eastCompAvg / len(dirComponents)
+          northCompAvg = northCompAvg / len(dirComponents)
+          spdAvg,vectorDirAvg = vectObj.calcMagAndDir(eastCompAvg, northCompAvg)
+          if self.logger:
+            self.logger.debug("Platform: %s Scalar Speed Avg: %f Vector Dir Avg: %f" % (platName,scalarSpdAvg,vectorDirAvg))
+
+        #2013-11-21 DWR Add check to verify we have components. Also reset the eastCompAvg and northCompAvg to 0
+        #before doing calcs.
+        #If we have speed and direction vectors, calc the averages.
+        if len(windComponents):
+          eastCompAvg = 0
+          northCompAvg = 0
+          for vectorTuple in windComponents:
+            eastCompAvg += vectorTuple[0]
+            northCompAvg += vectorTuple[1]
+
+          eastCompAvg = eastCompAvg / len(windComponents)
+          northCompAvg = northCompAvg / len(windComponents)
+          #Calculate average with speed and direction components.
+          spdAvg,dirAvg = vectObj.calcMagAndDir(eastCompAvg, northCompAvg)
+          self.logger.debug("Platform: %s Vector Speed Avg: %f Vector Dir Avg: %f" % (platName,spdAvg,dirAvg))
+
+    else:
+      if self.logger:
+        self.logger("Wind speed or wind direction id is not valid.")
+    return (spdAvg, dirAvg), (scalarSpdAvg, vectorDirAvg)
+  """
+  def calcAvgWindSpeedAndDir(self, platName, wind_speed_obsname, wind_speed_uom, wind_dir_obsname, wind_dir_uom, start_date, end_date):
+    wind_components = []
+    dir_components = []
+    vect_obj = vectorMagDir();
+    #Get the wind speed and direction so we can correctly average the data.
+    #Get the sensor ID for the obs we are interested in so we can use it to query the data.
+    #windSpdId = xeniaSQLite.sensorExists(self, wind_speed_obsname, wind_speed_uom, platName)
+    #windDirId = xeniaSQLite.sensorExists(self, wind_dir_obsname, wind_dir_uom, platName)
+    m_wind_speed_id = self.sensorExists(wind_speed_obsname, wind_speed_uom, platName)
+    m_wind_dir_id = self.sensorExists(wind_dir_obsname, wind_dir_uom, platName)
+    if m_wind_speed_id is not None and \
+      m_wind_dir_id is not None:
+
+      try:
+        wnd_spd_recs = self.session.query(multi_obs)\
+          .filter(multi_obs.sensor_id == m_wind_speed_id)\
+          .filter(multi_obs.m_date >= start_date)\
+          .filter(multi_obs.m_date < end_date)\
+          .order_by(multi_obs.m_date)\
+          .all()
+        wnd_dir_recs = self.session.query(multi_obs)\
+          .filter(multi_obs.sensor_id == m_wind_dir_id)\
+          .filter(multi_obs.m_date >= start_date)\
+          .filter(multi_obs.m_date < end_date)\
+          .order_by(multi_obs.m_date)\
+          .all()
+      except Exception as e:
+        self.logger.exception(e)
+      else:
+        scalar_spd = None
+        spd_cnt = 0
+        for spd_row in wnd_spd_recs:
+          if scalar_spd == None:
+            scalar_spd = 0
+          scalar_spd += spd_row.m_value
+          spd_cnt += 1
+          for dir_row in wnd_dir_recs:
+            if spd_row.m_date == dir_row.m_date:
+              self.logger.debug("Calculating vector for Speed(%s): %f Dir(%s): %f" % (spd_row.m_date, spd_row.m_value, dir_row.m_date, dir_row.m_value))
+              #Vector using both speed and direction.
+              wind_components.append(vect_obj.calcVector(spd_row.m_value, dir_row.m_value))
+              #VEctor with speed as constant(1), and direction.
+              dir_components.append(vect_obj.calcVector(1, dir_row.m_value))
+              break
+        #Get our average on the east and north components of the wind vector.
+        spd_avg = None
+        dir_avg = None
+        scalar_spd_avg = None
+        vectordir_avg = None
+
+        #If we have the direction only components, this is unity speed with wind direction, calc the averages.
+        if len(dir_components):
+          east_comp_avg = 0
+          north_comp_avg = 0
+          scalar_spd_avg = scalar_spd / spd_cnt
+
+          for vectorTuple in dir_components:
+            east_comp_avg += vectorTuple[0]
+            north_comp_avg += vectorTuple[1]
+
+          east_comp_avg = east_comp_avg / len(dir_components)
+          north_comp_avg = north_comp_avg / len(dir_components)
+          spd_avg,vectordir_avg = vect_obj.calcMagAndDir(east_comp_avg, north_comp_avg)
+          self.logger.debug("Platform: %s Scalar Speed Avg: %f Vector Dir Avg: %f" % (platName,scalar_spd_avg,vectordir_avg))
+
+        #2013-11-21 DWR Add check to verify we have components. Also reset the east_comp_avg and north_comp_avg to 0
+        #before doing calcs.
+        #If we have speed and direction vectors, calc the averages.
+        if len(wind_components):
+          east_comp_avg = 0
+          north_comp_avg = 0
+          for vectorTuple in wind_components:
+            east_comp_avg += vectorTuple[0]
+            north_comp_avg += vectorTuple[1]
+
+          east_comp_avg = east_comp_avg / len(wind_components)
+          north_comp_avg = north_comp_avg / len(wind_components)
+          #Calculate average with speed and direction components.
+          spd_avg,dir_avg = vect_obj.calcMagAndDir(east_comp_avg, north_comp_avg)
+          self.logger.debug("Platform: %s Vector Speed Avg: %f Vector Dir Avg: %f" % (platName,spd_avg,dir_avg))
+
+    else:
+      self.logger("Wind speed or wind direction id is not valid.")
+    return (spd_avg, dir_avg), (scalar_spd_avg, vectordir_avg)
+
 if __name__ == '__main__':
   xeniaDB = xeniaAlchemy()
