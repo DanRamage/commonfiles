@@ -2,6 +2,7 @@
 import sys
 #sys.path.append('../commonfiles')
 from math import pow
+from math import isnan as math_isnan
 import logging.config
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.core.compatibility import exec_
@@ -319,7 +320,7 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
           except (TypeError, OverflowError) as e:
             if self.logger:
               self.logger.exception(e)
-            if math.isnan(self.mlrResult):
+            if math_isnan(self.mlrResult):
               self.mlrResult = None
         else:
           if self.logger:
