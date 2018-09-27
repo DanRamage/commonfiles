@@ -319,6 +319,8 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
           except (TypeError, OverflowError) as e:
             if self.logger:
               self.logger.exception(e)
+            if math.isnan(self.mlrResult):
+              self.mlrResult = None
         else:
           if self.logger:
             self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
