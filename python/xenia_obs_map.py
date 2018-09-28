@@ -87,20 +87,23 @@ class json_obs_map:
     try:
       with open(file_name, "r") as obs_json:
         obs_json = json.load(obs_json)
-        for obs in obs_json:
-          xenia_obs = obs_map()
-          xenia_obs.target_obs = obs['target_obs']
-          if obs['target_uom'] is not None:
-            xenia_obs.target_uom = obs['target_uom']
-          xenia_obs.source_obs = obs['header_column']
-          if obs['source_uom'] is not None:
-            xenia_obs.source_uom = obs['source_uom']
-          if obs['s_order'] is not None:
-            xenia_obs.s_order = obs['s_order']
-          self.obs.append(xenia_obs)
+        self.load_json(obs_json)
     except Exception as e:
       self.logger.exception(e)
       raise
+
+  def load_json(self, obs_json):
+    for obs in obs_json:
+      xenia_obs = obs_map()
+      xenia_obs.target_obs = obs['target_obs']
+      if obs['target_uom'] is not None:
+        xenia_obs.target_uom = obs['target_uom']
+      xenia_obs.source_obs = obs['header_column']
+      if obs['source_uom'] is not None:
+        xenia_obs.source_uom = obs['source_uom']
+      if obs['s_order'] is not None:
+        xenia_obs.s_order = obs['s_order']
+      self.obs.append(xenia_obs)
 
   def build_db_mappings(self, **kwargs):
     db = xeniaAlchemy()
@@ -147,6 +150,7 @@ class json_obs_map:
     for obs in self.obs:
       if obs.source_obs == name:
         return obs
+    return None
 
   def __iter__(self):
     for obs_rec in self.obs:
