@@ -65,7 +65,7 @@ class MainLogConfig:
           'filename': self._log_filename,
           'formatter': 'f',
           'level': self._log_level,
-          'maxBytes': 5000,
+          'maxBytes': 5000000,
           'backupCount': 3
         }
       },
