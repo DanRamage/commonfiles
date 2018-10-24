@@ -61,10 +61,12 @@ class MainLogConfig:
           'level': self._log_level
         },
         'file_handler': {
-          'class': 'logging.FileHandler',
+          'class': 'logging.handlers.RotatingFileHandler',
           'filename': self._log_filename,
           'formatter': 'f',
-          'level': self._log_level
+          'level': self._log_level,
+          'maxBytes': 5000,
+          'backupCount': 3
         }
       },
       root={
