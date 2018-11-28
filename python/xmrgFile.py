@@ -857,21 +857,24 @@ class nexrad_db(object):
                 Intersects(radar.geom, GeomFromWKB(X'%s', 4326)))"\
                 %(boundary_polygon.wkb_hex, boundary_polygon.wkb_hex, start_time, end_time, boundary_polygon.wkb_hex)
     db_cursor = self.db_connection.cursor()
-    db_cursor.execute(sql)
-    if db_cursor != None:
-      total = 0.0
-      date = ''
-      cnt = 0
-      for row in db_cursor:
-        percent = row['percent']
-        precip = row['precipitation']
-        total += (percent * precip)
-        cnt += 1
-      db_cursor.close()
-      if(cnt > 0):
-        weighted_avg = total
-    else:
-      weighted_avg = None
+    try:
+      db_cursor.execute(sql)
+      if db_cursor != None:
+        total = 0.0
+        date = ''
+        cnt = 0
+        for row in db_cursor:
+          percent = row['percent']
+          precip = row['precipitation']
+          total += (percent * precip)
+          cnt += 1
+        db_cursor.close()
+        if(cnt > 0):
+          weighted_avg = total
+      else:
+        weighted_avg = None
+    except Exception as e:
+      self.logger.exception(e)
     return(weighted_avg)
 
 

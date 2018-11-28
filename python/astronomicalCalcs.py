@@ -329,7 +329,7 @@ if __name__ == '__main__':
 
   import time
   
-  moonCalcs = moon('2000-01-01 17:00:00')
+  moonCalcs = moon('2018-08-11 00:00:00')
   moonCalcs.doCalcs()
   
   sys.exit(0)

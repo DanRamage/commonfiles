@@ -12,12 +12,13 @@ from datetime import datetime, timedelta
 from pytz import timezone
 import requests
 from multiprocessing import Process, Queue, current_process
-
+import json
 import httplib2
 from apiclient import discovery
 from oauth2client.file import Storage
 from googleapiclient.http import MediaIoBaseDownload
 import io
+from pysqlite2 import dbapi2 as sqlite3
 
 from shapely.geometry import Polygon
 from shapely.wkt import loads as wkt_loads
@@ -30,98 +31,6 @@ from wqDatabase import wqDB
 from wqHistoricalData import item_geometry, geometry_list
 from xmrgFile import xmrgFile, hrapCoord, LatLong, nexrad_db, getCollectionDateFromFilename
 
-"""
-class configSettings(object):
-  def __init__(self, config_file):
-    try:
-      configFile = ConfigParser.RawConfigParser()
-      configFile.read(config_file)
-
-      bbox = configFile.get('nexrad_database', 'bbox')
-      self.minLL = None
-      self.maxLL = None
-      if(bbox != None):
-        latLongs = bbox.split(';')
-        self.minLL = LatLong()
-        self.maxLL = LatLong()
-        latlon = latLongs[0].split(',')
-        self.minLL.latitude = float( latlon[0] )
-        self.minLL.longitude = float( latlon[1] )
-        latlon = latLongs[1].split(',')
-        self.maxLL.latitude = float( latlon[0] )
-        self.maxLL.longitude = float( latlon[1] )
-
-      #Delete data that is older than the LastNDays
-      self.xmrgKeepLastNDays = configFile.getint('nexrad_database', 'keepLastNDays')
-
-      #Try to fill in any holes in the data going back N days.
-      self.backfillLastNDays = configFile.getint('nexrad_database', 'backfillLastNDays')
-
-      #Flag to specify whether or not to write the precip data to the database.
-      self.writePrecipToDB = configFile.getboolean('nexrad_database', 'writeToDB')
-
-      self.writePrecipToKML = configFile.getboolean('nexrad_database', 'writeToKML')
-
-      #If we are going to write shapefiles, get the output directory.
-      if(self.writePrecipToKML):
-        self.KMLDir = configFile.get('nexrad_database', 'KMLDir')
-        if(len(self.KMLDir) == 0):
-          self.writePrecipToKML = 0
-          if self.logger is not None:
-            self.logger.error("No KML directory provided, will not write shapefiles.")
-
-      self.saveAllPrecipVals = configFile.getboolean('nexrad_database', 'saveAllPrecipVals')
-
-      self.createPolygonsFromGrid = configFile.getboolean('nexrad_database', 'createPolygonsFromGrid')
-
-      #Flag to specify if we want to delete the compressed XMRG file when we are done processing.
-      #We might not be working off a compressed source file, so this flag only applies to a compressed file.
-      self.deleteCompressedSourceFile = configFile.getboolean('nexrad_database', 'deleteCompressedSourceFile')
-
-      #Flag to specify if we want to delete the XMRG file when we are done processing.
-      self.deleteSourceFile = configFile.getboolean('nexrad_database', 'deleteSourceFile')
-
-      #Directory to import XMRG files from
-      self.importDirectory = configFile.get('nexrad_database', 'importDirectory')
-
-      #Flag to specify if we want to calculate the weighted averages for the watersheds as we write the radar data
-      #into the precipitation_radar table.
-      self.calcWeightedAvg =configFile.getboolean('nexrad_database', 'calculateWeightedAverage')
-
-
-      self.dbName = configFile.get('database', 'name')
-      self.spatiaLiteLib = configFile.get('database', 'spatiaLiteLib')
-
-
-      self.baseURL = configFile.get('nexrad_database', 'baseURL')
-      #This tag is used to help further refine the files we process. For instance, hourly xmrg files are prepended
-      #with xmrg whereas the 6hr and 24hr files aren't. So we could use this to ignore those.
-      self.fileNameFilter = configFile.get('nexrad_database', 'fileNameFilter')
-      self.xmrgDLDir = configFile.get('nexrad_database', 'downloadDir')
-
-      #Directory where the NEXRAD database schema files live.
-      self.nexrad_schema_directory = configFile.get('nexrad_database', 'schema_directory')
-      #The files that create the tables we need in our NEXRAD DB.
-      self.nexrad_schema_files = configFile.get('nexrad_database', 'schema_files').split(',')
-
-      #File containing the boundaries we want to use to carve out data from the XMRG file.
-      self.boundaries_file = configFile.get('boundaries_settings', 'boundaries_file')
-
-      #Number of worker processes to start.
-      self.worker_process_count = configFile.getint('nexrad_database', 'worker_process_count')
-
-      #Specifies to attempt to add the sensors before inserting the data. Only need to do this
-      #on intial run.
-      self.add_sensors = True
-      #Specifies to attempt to add the platforms representing the radar coverage.
-      self.add_platforms = True
-
-      self.save_boundary_grid_cells = True
-      self.save_boundary_grids_one_pass = True
-
-    except (ConfigParser.Error, Exception):
-      pass
-"""
 class xmrg_results(object):
   def __init__(self):
     self.datetime = None
@@ -428,16 +337,11 @@ class wqXMRGProcessing(object):
         self.maxLL.latitude = float( latlon[0] )
         self.maxLL.longitude = float( latlon[1] )
 
-      #Delete data that is older than the LastNDays
-      #self.xmrgKeepLastNDays = configFile.getint('nexrad_database', 'keepLastNDays')
-
-      #Try to fill in any holes in the data going back N days.
-      #self.backfillLastNDays = configFile.getint('nexrad_database', 'backfillLastNDays')
-
-      #Flag to specify whether or not to write the precip data to the database.
-      #self.writePrecipToDB = configFile.getboolean('nexrad_database', 'writeToDB')
-
       self.writePrecipToKML = configFile.getboolean('nexrad_database', 'writeToKML')
+      try:
+        self.kmlColorsFile = configFile.get('nexrad_database', 'kmlColors')
+      except ConfigParser.Error as e:
+        self.kmlColorsFile = None
 
       #If we are going to write shapefiles, get the output directory.
       if(self.writePrecipToKML):
@@ -610,30 +514,76 @@ class wqXMRGProcessing(object):
     
     return(filetime)
 
-  def write_boundary_grid_kml(self, boundary, datetime, boundary_grids):
-    if self.logger:
-      self.logger.info("Start write_boundary_grid_kml for boundary: %s Date: %s" % (boundary, datetime))
-    kml_doc = KML.kml(KML.Document(
-                        KML.Name("Boundary: %s" % (boundary)),
-                        KML.Style(
-                          KML.LineStyle(
-                            KML.color('ffff0000'),
-                            KML.width(3),
-                          ),
-                          KML.PolyStyle(
-                            KML.color('800080ff'),
-                          ),
-                          id='grid_style'
-                        )
-                      )
-    )
+  def write_boundary_grid_kml(self, boundary, results):
+  #def write_boundary_grid_kml(self, boundary, datetime, boundary_grids):
 
+    date_time = results.datetime
+    boundary_grids = results.get_boundary_grid(boundary)
+    if self.logger:
+      self.logger.info("Start write_boundary_grid_kml for boundary: %s Date: %s" % (boundary, date_time))
+    if self.kmlColorsFile is None:
+        kml_doc = KML.kml(KML.Document(
+                            KML.Name("Boundary: %s" % (boundary)),
+                            KML.Style(
+                              KML.LineStyle(
+                                KML.color('ffff0000'),
+                                KML.width(3),
+                              ),
+                              KML.PolyStyle(
+                                KML.color('800080ff'),
+                              ),
+                              id='grid_style'
+                            )
+                          )
+        )
+    else:
+      try:
+          with open(self.kmlColorsFile, 'r') as color_file:
+            kml_colors_list = json.load(color_file)
+            styles = []
+            kml_docu = KML.Document(
+              KML.Name("Boundary: %s" % (boundary))
+            )
+
+            for ndx,color in enumerate(kml_colors_list['limits']):
+                if color['high'] is not None:
+                  color['high'] = color['high'] * 25.4
+                if color['low'] is not None:
+                  color['low'] = color['low'] * 25.4
+                #Colors are in HTML syntax, convert to KML
+                if ndx == 0:
+                  opacity = '20'
+                else:
+                  opacity = 'ff'
+                color_val = "%s%s%s%s" % (opacity, color['color'][4:6], color['color'][2:4], color['color'][0:2])
+                color['color'] = color_val
+                kml_docu.append(KML.Style(
+                  KML.LineStyle(
+                      KML.color(color['color']),
+                      KML.width(3),
+                  ),
+                  KML.PolyStyle(
+                      KML.color(color['color']),
+                  ),
+                  id='style_%d' % (ndx)
+              ))
+            kml_doc = KML.kml(kml_docu)
+      except Exception as e:
+          self.logger.exception(e)
     #doc = etree.SubElement(kml_doc, 'Document')
     try:
       for polygon, val in boundary_grids:
         coords = " ".join("%s,%s,0" % (tup[0],tup[1]) for tup in polygon.exterior.coords[:])
+        if self.kmlColorsFile is not None:
+            for ndx,color in enumerate(kml_colors_list['limits']):
+              if val  >= color['low'] and val < color['high']:
+                  style_id = "#style_%d" % (ndx)
+                  break
+        else:
+          style_id = 'grid_style'
         kml_doc.Document.append(KML.Placemark(KML.name('%f' % val),
-                                              KML.styleUrl('grid_style'),
+                                              KML.styleUrl(style_id),
+                                              KML.TimeStamp(KML.when(date_time)),
                                                KML.Polygon(
                                                  KML.outerBoundaryIs(
                                                    KML.LinearRing(
@@ -647,7 +597,7 @@ class wqXMRGProcessing(object):
         self.logger.exception(e)
     else:
       try:
-        kml_outfile = "%s%s_%s.kml" % (self.KMLDir, boundary, datetime.replace(':', '_'))
+        kml_outfile = "%s%s_%s.kml" % (self.KMLDir, boundary, date_time.replace(':', '_'))
         if self.logger:
           self.logger.debug("write_boundary_grid_kml KML outfile: %s" % (kml_outfile))
         kml_file = open(kml_outfile, "w")
@@ -658,7 +608,7 @@ class wqXMRGProcessing(object):
           self.logger.exception(e)
 
     if self.logger:
-      self.logger.info("End write_boundary_grid_kml for boundary: %s Date: %s" % (boundary, datetime))
+      self.logger.info("End write_boundary_grid_kml for boundary: %s Date: %s" % (boundary, date_time))
     return
 
   def import_files(self, file_list):
@@ -805,11 +755,13 @@ class wqXMRGProcessing(object):
     try:
       if self.writePrecipToKML and xmrg_results.get_boundary_grid('complete_area') is not None:
         if self.writePrecipToKML:
-          self.write_boundary_grid_kml('complete_area', xmrg_results.datetime, xmrg_results.get_boundary_grid('complete_area'))
+          #self.write_boundary_grid_kml('complete_area', xmrg_results.datetime, xmrg_results.get_boundary_grid('complete_area'))
+          self.write_boundary_grid_kml('complete_area', xmrg_results)
 
       for boundary_name, boundary_results in xmrg_results.get_boundary_data():
         if self.writePrecipToKML and xmrg_results.get_boundary_grid(boundary_name) is not None:
-          self.write_boundary_grid_kml(boundary_name, xmrg_results.datetime, xmrg_results.get_boundary_grid(boundary_name))
+          #self.write_boundary_grid_kml(boundary_name, xmrg_results.datetime, xmrg_results.get_boundary_grid(boundary_name))
+          self.write_boundary_grid_kml(boundary_name, xmrg_results)
 
         platform_handle = "nws.%s.radarcoverage" % (boundary_name)
         lat = 0.0
@@ -842,23 +794,35 @@ class wqXMRGProcessing(object):
               #weighted averages, instead of keeping lots of radar data in the radar table, we calc the avg and
               #store it as an obs in the multi-obs table.
               add_obs_start_time = time.time()
-              if self.xenia_db.addMeasurementWithMType(self.sensor_ids[platform_handle]['m_type_id'],
-                                              self.sensor_ids[platform_handle]['sensor_id'],
-                                              platform_handle,
-                                              xmrg_results.datetime,
-                                              lat, lon,
-                                              0,
-                                              mVals,
-                                              1,
-                                              True,
-                                              self.processingStartTime):
-                if self.logger is not None:
-                  self.logger.debug("Platform: %s Date: %s added weighted avg: %f in %f seconds." %(platform_handle, xmrg_results.datetime, avg, time.time() - add_obs_start_time))
-              else:
-                if self.logger is not None:
-                  self.logger.error( "%s"\
-                                     %(self.xenia_db.getErrorInfo()) )
-                self.xenia_db.clearErrorInfo()
+              try:
+                if self.xenia_db.addMeasurementWithMType(self.sensor_ids[platform_handle]['m_type_id'],
+                                                self.sensor_ids[platform_handle]['sensor_id'],
+                                                platform_handle,
+                                                xmrg_results.datetime,
+                                                lat, lon,
+                                                0,
+                                                mVals,
+                                                1,
+                                                True,
+                                                self.processingStartTime):
+                  if self.logger is not None:
+                    self.logger.debug("Platform: %s Date: %s added weighted avg: %f in %f seconds." %(platform_handle, xmrg_results.datetime, avg, time.time() - add_obs_start_time))
+              except sqlite3.IntegrityError:
+                # sql = 'UPDATE multi_obs SET(m_value=%f) WHERE m_type_id=%d AND sensor_id=%d AND m_date=date' % ()
+                try:
+                  add_obs_start_time = time.time()
+                  if self.xenia_db.updateMeasurement(self.sensor_ids[platform_handle]['m_type_id'],
+                                                  self.sensor_ids[platform_handle]['sensor_id'],
+                                                  platform_handle,
+                                                  xmrg_results.datetime,
+                                                  mVals):
+                    self.logger.debug("Platform: %s Date: %s updated weighted avg: %f in %f seconds." %(platform_handle, xmrg_results.datetime, avg, time.time() - add_obs_start_time))
+
+                except Exception as e:
+                  self.logger.exception(e)
+              except Exception as e:
+                self.logger.exception(e)
+
             else:
               if self.logger is not None:
                 self.logger.debug( "Platform: %s Date: %s weighted avg: %f(mm) is not valid, not adding to database." %(platform_handle, xmrg_results.datetime, avg))
@@ -888,7 +852,7 @@ class wqXMRGProcessing(object):
       self.logger.debug("Downloading file: %s" % (remote_filename_url))
     try:
       r = requests.get(remote_filename_url, stream=True)
-    except (requests.HTTPError, requests.ConnectionError) as e:
+    except (requests.HTTPError, requests.ConnectionError, Exception) as e:
       if self.logger:
         self.logger.exception(e)
     else:

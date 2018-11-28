@@ -8,6 +8,7 @@ from xenia import xeniaSQLite
 #from dhecDB import dhecDB
 from datetime import datetime, timedelta
 from pytz import timezone
+import time
 
 from stats import vectorMagDir
 
@@ -416,3 +417,47 @@ class wqDB(xeniaSQLite):
                               True) == -1:
         if self.logger:
           self.logger.error("Error platform: %s sensor: %s(%s) not added" % (platform_name, obs_info['obs_name'], obs_info['uom_name']))
+
+  """
+  Function: addMeasurement
+  Purpose: Adds a new entry into the multi_obs table.
+  """
+  def addMeasurementWithMType(self, mTypeID,
+                              sensorID,
+                              platformHandle,
+                              date,
+                              lat,
+                              lon,
+                              z,
+                              mValues,
+                              sOrder=1,
+                              autoCommit=True,
+                              rowEntryDate=None,
+                              updateOnDuplicate=False):
+    try:
+      dbCursor = self.DB.cursor()
+      dbCursor.execute('INSERT INTO multi_obs (platform_handle,m_value,sensor_id,m_type_id,m_date,m_lat,m_lon,m_z,row_entry_date) VALUES(?,?,?,?,?,?,?,?,?)',
+                       (platformHandle,mValues[0],sensorID,mTypeID,date,lat,lon,z,rowEntryDate))
+      if autoCommit:
+        self.DB.commit()
+      dbCursor.close()
+      return True
+    except (Exception, sqlite3.IntegrityError) as e:
+      raise
+    return False
+
+  def updateMeasurement(self, mTypeID, sensorID, platformHandle, date, mValues):
+    try:
+      dbCursor = self.DB.cursor()
+
+      dbCursor.execute('UPDATE multi_obs SET m_value=? WHERE m_type_id=? AND sensor_id=? AND m_date=?', (mValues[0],
+                                                                                                         mTypeID,
+                                                                                                         sensorID,
+                                                                                                         date))
+
+      self.DB.commit()
+      dbCursor.close()
+      return True
+    except Exception as e:
+      raise
+    return False
