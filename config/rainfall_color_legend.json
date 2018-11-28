@@ -1,0 +1,84 @@
+{
+  "limits": [
+    {
+      "high": 0.01,
+      "low": 0.0,
+      "color" : "000000"
+    },
+    {
+      "high": 0.10,
+      "low": 0.01,
+      "color" : "2ed2f8"
+    },
+    {
+      "high": 0.25,
+      "low": 0.10,
+      "color" : "61a1d1"
+    },
+    {
+      "high": 0.50,
+      "low": 0.25,
+      "color" : "2e50ae"
+    },
+    {
+      "high": 0.75,
+      "low": 0.50,
+      "color" : "35f242"
+    },
+    {
+      "high": 1.0,
+      "low": 0.750,
+      "color" : "3a8441"
+    },
+    {
+      "high": 1.50,
+      "low": 1.0,
+      "color" : "3a8441"
+    },
+    {
+      "high": 2.0,
+      "low": 1.5,
+      "color" : "fbf329"
+    },
+    {
+      "high": 2.5,
+      "low": 2.0,
+      "color" : "fedc84"
+    },
+    {
+      "high": 3.0,
+      "low": 2.5,
+      "color" : "fcaa31"
+    },
+    {
+      "high": 4.0,
+      "low": 3.0,
+      "color" : "fc4136"
+    },
+    {
+      "high": 5.0,
+      "low": 4.0,
+      "color" : "c23e38"
+    },
+    {
+      "high": 6.0,
+      "low": 5.0,
+      "color" : "9c3d39"
+    },
+    {
+      "high": 8.0,
+      "low": 6.0,
+      "color" : "f853f9"
+    },
+    {
+      "high": 10.0,
+      "low": 8.0,
+      "color" : "957ae6"
+    },
+    {
+      "high": null,
+      "low": 10.0,
+      "color" : "e0e0e0"
+    }
+  ]
+}
