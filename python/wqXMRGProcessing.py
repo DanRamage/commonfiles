@@ -65,6 +65,9 @@ class xmrg_results(object):
     for boundary_name, boundary_data in self.boundary_results.iteritems():
       yield (boundary_name, boundary_data)
 
+  def get_boundary_names(self):
+    return self.boundary_grids.keys()
+
 def process_xmrg_file(**kwargs):
   try:
     try:
@@ -306,6 +309,7 @@ class wqXMRGProcessing(object):
       self.xenia_db = None
       self.boundaries = geometry_list(use_logger=True) #[]
       self.sensor_ids = {}
+      self.kml_time_series = None
     try:
       #2011-07-25 DWR
       #Added a processing start time to use for the row_entry_date value when we add new records to the database.
@@ -342,6 +346,11 @@ class wqXMRGProcessing(object):
         self.kmlColorsFile = configFile.get('nexrad_database', 'kmlColors')
       except ConfigParser.Error as e:
         self.kmlColorsFile = None
+      try:
+        self.kmlTimeSeries = configFile.getboolean('nexrad_database', 'kmlCreateTimeSeries')
+        self.kml_time_series = []
+      except ConfigParser.Error as e:
+        self.kmlTimeSeries = False
 
       #If we are going to write shapefiles, get the output directory.
       if(self.writePrecipToKML):
@@ -514,9 +523,101 @@ class wqXMRGProcessing(object):
     
     return(filetime)
 
-  def write_boundary_grid_kml(self, boundary, results):
-  #def write_boundary_grid_kml(self, boundary, datetime, boundary_grids):
+  def write_kml_time_series(self):
+    start_kml_time = time.time()
+    if self.logger:
+      self.logger.info("Start write_kml_time_series")
+    try:
+        with open(self.kmlColorsFile, 'r') as color_file:
+          kml_colors_list = json.load(color_file)
+          styles = []
+          kml_docu = KML.Document(
+            #KML.Name("Boundary: %s" % (boundary))
+          )
 
+          for ndx,color in enumerate(kml_colors_list['limits']):
+              if color['high'] is not None:
+                color['high'] = color['high'] * 25.4
+              if color['low'] is not None:
+                color['low'] = color['low'] * 25.4
+              #Colors are in HTML syntax, convert to KML
+              if ndx == 0:
+                opacity = '20'
+              else:
+                opacity = 'ff'
+              color_val = "%s%s%s%s" % (opacity, color['color'][4:6], color['color'][2:4], color['color'][0:2])
+              color['color'] = color_val
+              kml_docu.append(KML.Style(
+                KML.LineStyle(
+                    KML.color(color['color']),
+                    KML.width(3),
+                ),
+                KML.PolyStyle(
+                    KML.color(color['color']),
+                ),
+                id='style_%d' % (ndx)
+            ))
+          kml_doc = KML.kml(kml_docu)
+    except Exception as e:
+        self.logger.exception(e)
+    #doc = etree.SubElement(kml_doc, 'Document')
+    try:
+      """
+      self.kml_time_series['results'].append({'datetime': xmrg_results['datetime'],
+                                        'boundary_results': xmrg_results['boundary_results']})
+      """
+      #Sort the results based on datetime
+      self.kml_time_series.sort(key=lambda result: result.datetime)
+      boundary_names = self.kml_time_series[0].get_boundary_names()
+      for boundary in boundary_names:
+        # Get list of the grids
+        for results in self.kml_time_series:
+
+            kml_docu.append(KML.Name("Boundary: %s" % (boundary)))
+            date_time = results.datetime
+            boundary_grids = results.get_boundary_grid(boundary)
+
+            for polygon, val in boundary_grids:
+              coords = " ".join("%s,%s,0" % (tup[0],tup[1]) for tup in polygon.exterior.coords[:])
+              if self.kmlColorsFile is not None:
+                  for ndx,color in enumerate(kml_colors_list['limits']):
+                    if val  >= color['low'] and val < color['high']:
+                        style_id = "#style_%d" % (ndx)
+                        break
+              else:
+                style_id = 'grid_style'
+              kml_doc.Document.append(KML.Placemark(KML.name('%f' % val),
+                                                    KML.styleUrl(style_id),
+                                                    KML.TimeStamp(KML.when(date_time)),
+                                                     KML.Polygon(
+                                                       KML.outerBoundaryIs(
+                                                         KML.LinearRing(
+                                                          KML.coordinates(coords)
+                                                         )
+                                                       )
+                                                     ))
+              )
+        try:
+          kml_outfile = os.path.join(self.KMLDir, "%s_%s.kml" % (boundary, date_time.replace(':', '_')))
+          if self.logger:
+            self.logger.debug("write_boundary_grid_kml KML outfile: %s" % (kml_outfile))
+          kml_file = open(kml_outfile, "w")
+          kml_file.write(etree.tostring(kml_doc, pretty_print=True))
+          kml_file.close()
+        except (IOError,Exception) as e:
+          if self.logger:
+            self.logger.exception(e)
+
+    except (IOError, Exception) as e:
+      if self.logger:
+        self.logger.exception(e)
+
+    if self.logger:
+        self.logger.info("End write_kml_time_series in %f seconds" % (time.time()-start_kml_time))
+    return
+
+  #def write_boundary_grid_kml(self, boundary, datetime, boundary_grids):
+  def write_boundary_grid_kml(self, boundary, results, build_time_series=False):
     date_time = results.datetime
     boundary_grids = results.get_boundary_grid(boundary)
     if self.logger:
@@ -672,6 +773,9 @@ class wqXMRGProcessing(object):
       if self.logger:
         self.logger.debug("Imported: %d records" % (rec_count))
 
+    if self.kmlTimeSeries:
+      self.write_kml_time_series()
+
     if self.logger:
       self.logger.debug("Finished import_files" )
 
@@ -746,6 +850,9 @@ class wqXMRGProcessing(object):
       if self.logger:
         self.logger.debug("Finished. Import: %d records from: %s" % (rec_count, importDirectory))
 
+      if self.kmlTimeSeries:
+        self.write_kml_time_series()
+
     except Exception, E:
       self.lastErrorMsg = str(E)
       if self.logger is not None:
@@ -753,15 +860,18 @@ class wqXMRGProcessing(object):
 
   def process_result(self, xmrg_results):
     try:
-      if self.writePrecipToKML and xmrg_results.get_boundary_grid('complete_area') is not None:
+      if not self.kmlTimeSeries and self.writePrecipToKML and xmrg_results.get_boundary_grid('complete_area') is not None:
         if self.writePrecipToKML:
           #self.write_boundary_grid_kml('complete_area', xmrg_results.datetime, xmrg_results.get_boundary_grid('complete_area'))
           self.write_boundary_grid_kml('complete_area', xmrg_results)
 
       for boundary_name, boundary_results in xmrg_results.get_boundary_data():
-        if self.writePrecipToKML and xmrg_results.get_boundary_grid(boundary_name) is not None:
+        if not self.kmlTimeSeries and self.writePrecipToKML and xmrg_results.get_boundary_grid(boundary_name) is not None:
           #self.write_boundary_grid_kml(boundary_name, xmrg_results.datetime, xmrg_results.get_boundary_grid(boundary_name))
           self.write_boundary_grid_kml(boundary_name, xmrg_results)
+
+        if self.kmlTimeSeries:
+          self.kml_time_series.append(xmrg_results)
 
         platform_handle = "nws.%s.radarcoverage" % (boundary_name)
         lat = 0.0
@@ -1067,12 +1177,12 @@ class wqXMRGProcessing(object):
     retVal = False
     if self.logger is not None:
       stats = os.stat(self.dbName)
-      self.logger.debug("Begin database vacuum. File size: %d" % (stats[ST_SIZE]))
+      self.logger.debug("Begin database vacuum. File size: %d" % (stats[os.stat.ST_SIZE]))
     db = wqDB(self.dbSettings.dbName, None, self.logger)
     if(db.vacuumDB() != None):
       if self.logger is not None:
         stats = os.stat(self.dbSettings.dbName)
-        self.logger.debug("Database vacuum completed. File size: %d" % (stats[ST_SIZE]))
+        self.logger.debug("Database vacuum completed. File size: %d" % (stats[os.stat.ST_SIZE]))
       retVal = True
     else:
       self.logger.error("Database vacuum failed: %s" % (db.lastErrorMsg))
