@@ -698,7 +698,8 @@ class wqXMRGProcessing(object):
         self.logger.exception(e)
     else:
       try:
-        kml_outfile = "%s%s_%s.kml" % (self.KMLDir, boundary, date_time.replace(':', '_'))
+        kml_outfile = os.path.join(self.KMLDir, "%s_%s.kml" % (boundary, date_time.replace(':', '_')))
+        #kml_outfile = "%s%s_%s.kml" % (self.KMLDir, boundary, date_time.replace(':', '_'))
         if self.logger:
           self.logger.debug("write_boundary_grid_kml KML outfile: %s" % (kml_outfile))
         kml_file = open(kml_outfile, "w")
