@@ -1045,6 +1045,7 @@ class wqXMRGProcessing(object):
       # The file token.pickle stores the user's access and refresh tokens, and is
       # created automatically when the authorization flow completes for the first
       # time.
+      self.logger.debug("Opening google credential file: %s" % (self.google_credentials_json))
       if os.path.exists(self.google_credentials_json):
         with open(self.google_credentials_json, 'rb') as token:
           creds = pickle.load(token)
@@ -1056,6 +1057,7 @@ class wqXMRGProcessing(object):
       get_next_page = True
       google_drive_file_list = []
       while get_next_page == True:
+        self.logger.debug("Preparing to list files in directory.")
         google_req = self.google_drive.files().list(q="'%s' in parents" % (self.google_folder_id),pageSize=100, pageToken=pageToken).execute()
         google_drive_file_list.extend(google_req.get('files'))
         self.logger.debug("Google Drive folder file list query returned: %d recs" % (len(google_drive_file_list)))
