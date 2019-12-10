@@ -1083,7 +1083,7 @@ class wqXMRGProcessing(object):
             if self.logger:
               self.logger.exception(e)
         elif self.use_google_drive:
-          self.logger.debug("Preparing to download from google drive.Ggg")
+          self.logger.debug("Preparing to download from google drive.")
           dl_filename = self.google_drive_download_file(file_name=file_name,
                                                         google_file_list=google_drive_file_list)
       if dl_filename is not None:
