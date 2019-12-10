@@ -30,6 +30,7 @@ from wqDatabase import wqDB
 #from processXMRGFile import processXMRGData
 from wqHistoricalData import item_geometry, geometry_list
 from xmrgFile import xmrgFile, hrapCoord, LatLong, nexrad_db, getCollectionDateFromFilename
+import pickle
 
 class xmrg_results(object):
   def __init__(self):
@@ -1036,10 +1037,19 @@ class wqXMRGProcessing(object):
       ssh.connect(self.baseURL, username=self.sftp_user, password=self.sftp_password)
       ftp = ssh.open_sftp()
     elif self.use_google_drive:
+      '''
       store = Storage(self.google_credentials_json)
       google_drive_credentials = store.get()
       http = google_drive_credentials.authorize(httplib2.Http())
-      self.google_drive = discovery.build('drive', 'v3', http=http)
+      '''
+      # The file token.pickle stores the user's access and refresh tokens, and is
+      # created automatically when the authorization flow completes for the first
+      # time.
+      if os.path.exists(self.google_credentials_json):
+        with open(self.google_credentials_json, 'rb') as token:
+          creds = pickle.load(token)
+
+      self.google_drive = discovery.build('drive', 'v3', credentials=creds)
 
       #Check if we have to keep requesting pages to get all files.
       pageToken = ''
