@@ -1089,10 +1089,12 @@ class wqXMRGProcessing(object):
       self.logger.debug("Starting download_range")
     try:
       file_list = self.file_list_from_date_range(start_date, hour_count)
+      self.logger.debug("File list has: %d files" % (len(file_list)))
     except ConfigParser.Error, e:
       if self.logger:
         self.logger.exception(e)
     else:
+      self.logger.debug("Preparing to download files")
       files_downloaded = self.download_file_list(file_list)
     if self.logger:
       self.logger.debug("Finished download_range")
