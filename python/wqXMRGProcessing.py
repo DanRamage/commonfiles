@@ -1051,22 +1051,24 @@ class wqXMRGProcessing(object):
           with open(self.google_credentials_json, 'rb') as token:
             creds = pickle.load(token)
 
-        self.google_drive = discovery.build('drive', 'v3', credentials=creds)
+          self.google_drive = discovery.build('drive', 'v3', credentials=creds)
 
-        #Check if we have to keep requesting pages to get all files.
-        pageToken = ''
-        get_next_page = True
-        google_drive_file_list = []
-        while get_next_page == True:
-          self.logger.debug("Preparing to list files in directory.")
-          google_req = self.google_drive.files().list(q="'%s' in parents" % (self.google_folder_id),pageSize=100, pageToken=pageToken).execute()
-          google_drive_file_list.extend(google_req.get('files'))
-          self.logger.debug("Google Drive folder file list query returned: %d recs" % (len(google_drive_file_list)))
-          if 'nextPageToken' in google_req and len(google_req['nextPageToken']):
-            self.logger.debug("Google Drive reports more files to pull.")
-            pageToken = google_req['nextPageToken']
-          else:
-            get_next_page = False
+          #Check if we have to keep requesting pages to get all files.
+          pageToken = ''
+          get_next_page = True
+          google_drive_file_list = []
+          while get_next_page == True:
+            self.logger.debug("Preparing to list files in directory.")
+            google_req = self.google_drive.files().list(q="'%s' in parents" % (self.google_folder_id),pageSize=100, pageToken=pageToken).execute()
+            google_drive_file_list.extend(google_req.get('files'))
+            self.logger.debug("Google Drive folder file list query returned: %d recs" % (len(google_drive_file_list)))
+            if 'nextPageToken' in google_req and len(google_req['nextPageToken']):
+              self.logger.debug("Google Drive reports more files to pull.")
+              pageToken = google_req['nextPageToken']
+            else:
+              get_next_page = False
+        else:
+          self.logger.error("Cannot open the google credentials file: %s" % (self.google_credentials_json))
       except Exception as e:
         self.logger.exception(e)
     for file_name in file_list:
@@ -1081,7 +1083,7 @@ class wqXMRGProcessing(object):
             if self.logger:
               self.logger.exception(e)
         elif self.use_google_drive:
-          self.logger.debug("Preparing to download from google drive.")
+          self.logger.debug("Preparing to download from google drive.Ggg")
           dl_filename = self.google_drive_download_file(file_name=file_name,
                                                         google_file_list=google_drive_file_list)
       if dl_filename is not None:
