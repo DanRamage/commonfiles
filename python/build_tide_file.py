@@ -1,4 +1,5 @@
 import os
+import sys
 import logging.config
 from datetime import datetime,timedelta
 from pytz import timezone
@@ -16,7 +17,7 @@ def get_tide_data(**kwargs):
 
     logging.config.dictConfig(kwargs['worker_log_config'])
 
-    logger = logging.getLogger(current_process().name)
+    logger = logging.getLogger()
     logger.info("%s starting get_tide_data." % (current_process().name))
 
     inputQueue = kwargs['input_queue']
@@ -120,23 +121,39 @@ def create_tide_data_file_mp(tide_station,
     # We disable existing loggers to disable the "setup" logger used in the
     # parent process. This is needed on POSIX because the logger will
     # be there in the child following a fork().
-    config_worker = {
-        'version': 1,
-        'disable_existing_loggers': True,
-        'handlers': {
-            'queue': {
-                'class': 'logutils.queue.QueueHandler',
-                'queue': log_queue,
-            },
-        },
-        'root': {
-          'level': 'NOTSET',
-          'handlers': ['queue']
-        }
-    }
+    if sys.version_info[0] < 3:
+      config_worker = {
+          'version': 1,
+          'disable_existing_loggers': True,
+          'handlers': {
+              'queue': {
+                  'class': 'logutils.queue.QueueHandler',
+                  'queue': log_queue,
+              },
+          },
+          'root': {
+            'level': 'NOTSET',
+            'handlers': ['queue']
+          }
+      }
+    else:
+      config_worker = {
+          'version': 1,
+          'disable_existing_loggers': True,
+          'handlers': {
+              'queue': {
+                  'class': 'logging.handlers.QueueHandler',
+                  'queue': log_queue,
+              },
+          },
+          'root': {
+            'level': 'NOTSET',
+            'handlers': ['queue']
+          }
+      }
 
     logging.config.dictConfig(config_worker)
-    logger = logging.getLogger("profile_reader")
+    logger = logging.getLogger()
 
     workers = worker_process_count
     inputQueue = Queue()
@@ -150,7 +167,7 @@ def create_tide_data_file_mp(tide_station,
       inputQueue.put(date_rec)
 
     #Start up the worker processes.
-    for workerNum in xrange(workers):
+    for workerNum in range(workers):
       args = {
         'input_queue': inputQueue,
         'results_queue': resultQueue,
@@ -223,7 +240,7 @@ def create_tide_data_file_mp(tide_station,
               tide_stage_fitted = ""
               if tide_data['tide_stage_fitted'] != -9999:
                 tide_stage_fitted = tide_data['tide_stage_fitted']
-          except TypeError, e:
+          except TypeError as e:
             if logger:
               logger.exception(e)
         else:
@@ -378,7 +395,7 @@ def create_tide_data_file(tide_station, date_list, output_file):
                 #Save tide station values.
                 tide_hi = tide_data['HH']['value']
                 tide_lo = tide_data['LL']['value']
-              except TypeError, e:
+              except TypeError as e:
                 if logger:
                   logger.exception(e)
             else:
@@ -388,7 +405,7 @@ def create_tide_data_file(tide_station, date_list, output_file):
                 tide_hi = tide_data['PeakValue']['value']
                 tide_lo = tide_data['ValleyValue']['value']
                 tide_range = tide_hi - tide_lo
-              except TypeError, e:
+              except TypeError as e:
                 if logger:
                   logger.exception(e)
 
@@ -401,7 +418,7 @@ def create_tide_data_file(tide_station, date_list, output_file):
           logger.debug("Finished retrieving tide data for station: %s date: %s" % (tide_station, wq_utc_date.strftime("%Y-%m-%dT%H:%M:%S")))
 
 
-  except IOError, e:
+  except IOError as e:
     if logger:
       logger.exception(e)
 

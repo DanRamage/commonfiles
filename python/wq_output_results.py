@@ -34,7 +34,7 @@ class wq_sample_data:
   @property
   def value(self):
     return self._value
-  @date_time.setter
+  @value.setter
   def value(self, value):
     self._value = value
 
@@ -125,7 +125,7 @@ class wq_advisories_file:
         else:
           self.logger.debug("Features not found in json data, building")
           features = self.build_site_features(wq_samples)
-    except IOError as e:
+    except (IOError, Exception) as e:
       self.logger.error("File: %s does not exist yet." % (out_file_name))
       features = self.build_site_features(wq_samples)
     try:
@@ -222,7 +222,7 @@ class wq_station_advisories_file:
           'station': self.sample_site.name,
           'value': [sample.value]
         })
-    if os.path.isfile(station_filename):
+    if os.path.isfile(station_filename) and os.stat(station_filename).st_size > 0:
       try:
         self.logger.debug("Opening station JSON file: %s" % (station_filename))
         with open(station_filename, 'r') as station_json_file:

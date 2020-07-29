@@ -343,7 +343,7 @@ class xeniaAlchemy(object):
       self.connection = self.dbEngine.connect()
       
       return(True)
-    except exc.OperationalError, e:
+    except exc.OperationalError as e:
       if(self.logger != None):
         self.logger.exception(e)
     return(False)
@@ -362,10 +362,10 @@ class xeniaAlchemy(object):
         .filter(platform.platform_handle == platformHandle)\
         .one()
       return(platRec.row_id)
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug(e)
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)    
     return(None)
@@ -429,7 +429,7 @@ class xeniaAlchemy(object):
       platformRecId = self.addRec(platformRec, True)
       if(self.logger):
         self.logger.debug("Platform: %s(%d) added to database." % (platformRec.platform_handle, platformRec.row_id))
-    except Exception,e:
+    except Exception as e:
       if(self.logger):
         self.logger.exception(e)
         
@@ -456,10 +456,10 @@ class xeniaAlchemy(object):
         .filter(organization.short_name == organizationName)\
         .one()
       return(orgRec.row_id)
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug(e)
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)    
     return(None)
@@ -489,10 +489,10 @@ class xeniaAlchemy(object):
         .filter(obs_type.standard_name == obsName)\
         .filter(uom_type.standard_name == uom).one()
       return(rec.row_id)
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug(e)
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
     
@@ -576,11 +576,11 @@ class xeniaAlchemy(object):
         .filter(obs_type.standard_name == obsName)\
         .filter(uom_type.standard_name == uom).one()
       return(rec.row_id)
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug("m_type %s(%s) does not exist." % (obsName, uom))
         #self.logger.debug(e)
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
     
@@ -603,7 +603,7 @@ class xeniaAlchemy(object):
     try:
       nextRowId = self.session.query(func.max(m_type.row_id)).one()[0]
       nextRowId += 1
-    except Exception,e:
+    except Exception as e:
       if(self.logger):
         self.logger.exception(e)
     else:
@@ -634,11 +634,11 @@ class xeniaAlchemy(object):
         .filter(obs_type.standard_name == obsName)\
         .one()
       rowId = rec.row_id
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug("Observation: %s does not exist in obs_type table." % (obsName))
       rowId = -1
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
         
@@ -657,7 +657,7 @@ class xeniaAlchemy(object):
     try:
       nextRowId = self.session.query(func.max(obs_type.row_id)).one()[0]
       nextRowId += 1
-    except Exception,e:
+    except Exception as e:
       if(self.logger):
         self.logger.exception(e)
     else:
@@ -687,11 +687,11 @@ class xeniaAlchemy(object):
         .filter(uom_type.standard_name == uomName)\
         .one()
       rowId = rec.row_id
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug("UOM: %s does not exist in obs_type table." % (uomName))
       rowId = -1  
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
     return(rowId)
@@ -710,7 +710,7 @@ class xeniaAlchemy(object):
     try:
       nextRowId = self.session.query(func.max(uom_type.row_id)).one()[0]
       nextRowId += 1
-    except Exception,e:
+    except Exception as e:
       if(self.logger):
         self.logger.exception(e)
     else:
@@ -744,11 +744,11 @@ class xeniaAlchemy(object):
         .filter(m_scalar_type.uom_type_id == uomTypeID)\
         .one()
       rowId = rec.row_id
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug("Scalar type for obs_type_id: %d uom_type_id: %d does not exist in m_scalar_type table." %(obsTypeID, uomTypeID))
       rowId = -1  
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
     return(rowId)
@@ -771,7 +771,7 @@ class xeniaAlchemy(object):
     try:
       nextRowId = self.session.query(func.max(m_scalar_type.row_id)).one()[0]
       nextRowId += 1
-    except Exception,e:
+    except Exception as e:
       if(self.logger):
         self.logger.exception(e)
     else:
@@ -792,10 +792,10 @@ class xeniaAlchemy(object):
       rec = self.session.query(sensor_status.status)\
           .filter(platform_status.platform_handle==platformHandle).one()
       return(rec.status)
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug(e)
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
     return(None)  
@@ -806,10 +806,10 @@ class xeniaAlchemy(object):
           .filter(platform.platform_handle==platformHandle)\
           .filter(sensor_status.sensor_name==obsName).one()
       return(rec.status)
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug(e)
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
     return(None)  
@@ -820,10 +820,10 @@ class xeniaAlchemy(object):
         .filter(platform_type.type_name == platformType)\
         .one()
       return(platRec.row_id)
-    except NoResultFound, e:
+    except NoResultFound as e:
       if(self.logger != None):
         self.logger.debug(e)
-    except exc.InvalidRequestError, e:
+    except exc.InvalidRequestError as e:
       if(self.logger != None):
         self.logger.exception(e)
     return(None)
@@ -836,7 +836,7 @@ class xeniaAlchemy(object):
       if(commit):
         self.session.commit()
     #Trying to add record that already exists.
-    except exc.IntegrityError, e:
+    except exc.IntegrityError as e:
       self.session.rollback()
       if(self.logger != None):
         self.logger.exception(e)
@@ -848,7 +848,7 @@ class xeniaAlchemy(object):
       if(commit):
         self.session.commit()
     #Trying to add record that already exists.
-    except exc.IntegrityError, e:
+    except exc.IntegrityError as e:
       self.session.rollback()
       if(self.logger != None):
         self.logger.exception(e)

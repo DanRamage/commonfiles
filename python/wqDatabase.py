@@ -2,7 +2,12 @@ import sys
 sys.path.append('../commonfiles')
 
 import logging.config
-from pysqlite2 import dbapi2 as sqlite3
+
+if sys.version_info[0] < 3:
+  from pysqlite2 import dbapi2 as sqlite3
+else:
+  import sqlite3
+  
 from xenia import xeniaSQLite
 
 #from dhecDB import dhecDB
@@ -60,7 +65,7 @@ class wqDB(xeniaSQLite):
       try:
         dbCursor = self.DB.cursor()
         dbCursor.execute(sql)
-      except sqlite3.Error, e:
+      except sqlite3.Error as e:
         if self.logger:
           self.logger.exception(e)
       else:
@@ -80,7 +85,7 @@ class wqDB(xeniaSQLite):
       try:
         dbCursor = self.DB.cursor()
         dbCursor.execute(sql)
-      except sqlite3.Error, e:
+      except sqlite3.Error as e:
         if self.logger:
           self.logger.exception(e)
       else:
@@ -121,7 +126,7 @@ class wqDB(xeniaSQLite):
       try:
         dbCursor = self.DB.cursor()
         dbCursor.execute(sql)
-      except sqlite3.Error, e:
+      except sqlite3.Error as e:
         if self.logger:
           self.logger.exception(e)
         dry_cnt = None
@@ -179,7 +184,7 @@ class wqDB(xeniaSQLite):
     try:
       dbCursor = self.DB.cursor()
       dbCursor.execute(sql)
-    except sqlite3.Error, e:
+    except sqlite3.Error as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -289,7 +294,7 @@ class wqDB(xeniaSQLite):
         windSpdCursor.execute(spd_sql)
         windDirCursor = self.DB.cursor()
         windDirCursor.execute(dir_sql)
-      except sqlite3.Error, e:
+      except sqlite3.Error as e:
         if self.logger:
           self.logger.exception(e)
       else:

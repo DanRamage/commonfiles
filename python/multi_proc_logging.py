@@ -1,7 +1,11 @@
 import logging
 import logging.config
 import logging.handlers
-from logutils.queue import QueueListener
+import sys
+if sys.version_info[0] < 3:
+    from logutils.queue import QueueListener
+else:
+    from logging.handlers import QueueListener
 from multiprocessing import Process, Queue, Event, current_process
 import os
 

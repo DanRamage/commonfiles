@@ -21,7 +21,10 @@ import optparse
 import math
 import gzip
 from numpy import zeros
-from pysqlite2 import dbapi2 as sqlite3      
+if sys.version_info[0] < 3:
+  from pysqlite2 import dbapi2 as sqlite3
+else:
+  import sqlite3
 import datetime
 
 
@@ -140,7 +143,7 @@ class xmrgFile:
 
       self.xmrgFile = open( self.fileName, mode = 'rb' )
       retVal = True
-    except Exception, E:
+    except Exception as E:
       import traceback      
       self.lastErrorMsg = traceback.format_exc()
       if(self.logger != None ):
@@ -290,7 +293,7 @@ class xmrgFile:
         self.headerRead = True
         return( True )
 
-    except Exception, E:
+    except Exception as E:
       import traceback      
       self.lastErrorMsg = traceback.format_exc()
       
@@ -546,7 +549,7 @@ class xmrgDB(object):
           return(True)
         else:
           self.lastErrorMsg = "Failed to load SpatiaLite library: %s. Cannot continue." %(spatiaLiteLibFile)    
-    except Exception, E:
+    except Exception as E:
       import traceback        
       exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
       
@@ -568,7 +571,7 @@ class xmrgDB(object):
       dbCursor = self.db.cursor()
       dbCursor.execute( sqlQuery )        
       return( dbCursor )
-    except sqlite3.Error, e:
+    except sqlite3.Error as e:
       import traceback        
       exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
       
@@ -576,7 +579,7 @@ class xmrgDB(object):
                                       exceptionValue,
                                       exceptionTraceback)))     
       del e
-    except Exception, E:
+    except Exception as E:
       import traceback        
       exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
       
@@ -603,7 +606,7 @@ class xmrgDB(object):
         self.db.commit()
         dbCursor.close()
         return(True)  
-      except sqlite3.Error, e:
+      except sqlite3.Error as e:
         import traceback        
         exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
         
@@ -743,11 +746,11 @@ class xmrgDB(object):
       dbCursor.execute(sql)    
       dbCursor.close()
       return(True)    
-    except sqlite3.Error, e:        
+    except sqlite3.Error as e:        
       msg = self.procTraceback()
       self.logger.critical(msg)      
       sys.exit(-1)      
-    except Exception, E:
+    except Exception as E:
       msg = self.procTraceback()
       self.logger.critical(msg)      
       sys.exit(-1)      
@@ -776,7 +779,7 @@ class nexrad_db(object):
     db_cursor = self.db_connection.cursor()
     try:
       db_cursor.execute(sql)
-    except Exception,e:
+    except Exception as e:
       raise
 
     if(db_cursor != None):
@@ -943,7 +946,7 @@ class xmrgCleanup(object):
           srcFullPath = "%s/%s" % (self.srcDirectory, fileName)
           destFullPath = "%s/%s" % (archiveDir, fileName)
           shutil.move(srcFullPath, destFullPath)
-        except Exception,e:
+        except Exception as e:
           if(self.logger):
             self.logger.exception(e)
           
@@ -1087,7 +1090,7 @@ if __name__ == '__main__':
             print( "Longitude: %s Latitude: %s PrecipValue: %s" % (row['longitude'],row['latitude'],row['precipitation']))
         weightedAvg = db.calculateWeightedAvg(polygonPtList, filetime, filetime)
         print("Weighted Average: %f" %(weightedAvg))
-  except Exception, E:
+  except Exception as E:
     import traceback
     print( traceback.print_exc() )
         

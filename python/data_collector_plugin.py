@@ -2,7 +2,11 @@ import logging.config
 
 from yapsy.IPlugin import IPlugin
 from multiprocessing import Process, Queue
-from logutils.queue import QueueListener
+import sys
+if sys.version_info[0] < 3:
+  from logutils.queue import QueueListener
+else:
+  from logging.handlers import QueueListener
 
 class data_collector_plugin(IPlugin, Process):
   def __init__(self):

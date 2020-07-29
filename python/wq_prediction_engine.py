@@ -6,7 +6,11 @@ from output_plugin import output_plugin
 from pytz import timezone
 import time
 from data_collector_plugin import data_collector_plugin
-import ConfigParser
+
+if sys.version_info[0] < 3:
+  import ConfigParser
+else:
+  import configparser as ConfigParser
 
 class data_result_types:
   NO_TYPE = 0

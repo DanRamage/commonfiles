@@ -162,7 +162,7 @@ class correlation(covariance):
          self.y.populationStdDev != None and self.y.populationStdDev != 0):
         correlation = cov / (self.x.populationStdDev * self.y.populationStdDev)    
       return(correlation)
-    except Exception, e:
+    except Exception as e:
       print(e)
         
 class vectorMagDir(object):

@@ -5,7 +5,10 @@ import os
 
 import logging.config
 import optparse
-import ConfigParser
+if sys.version_info[0] < 3:
+  import ConfigParser
+else:
+  import configparser as ConfigParser
 import time
 import re
 from datetime import datetime, timedelta
@@ -13,17 +16,29 @@ from pytz import timezone
 import requests
 from multiprocessing import Process, Queue, current_process
 import json
-import httplib2
-from apiclient import discovery
+#import httplib2
+
+'''
+if sys.version_info[0] < 3:
+  from apiclient import discovery
+else:
+  from googleapiclient import discovery
+
 from oauth2client.file import Storage
 from googleapiclient.http import MediaIoBaseDownload
+'''
 import io
-from pysqlite2 import dbapi2 as sqlite3
+
+if sys.version_info[0] < 3:
+  from pysqlite2 import dbapi2 as sqlite3
+else:
+  import sqlite3
 
 from shapely.geometry import Polygon
 from shapely.wkt import loads as wkt_loads
 
 from pykml.factory import KML_ElementMaker as KML
+
 from lxml import etree
 from wqDatabase import wqDB
 
@@ -112,7 +127,7 @@ def process_xmrg_file(**kwargs):
       #nexrad_db_conn.db_connection.isolation_level = None
       nexrad_db_conn.db_connection.execute("PRAGMA synchronous = OFF")
       nexrad_db_conn.db_connection.execute("PRAGMA journal_mode = MEMORY")
-    except Exception,e:
+    except Exception as e:
       if logger:
         logger.exception(e)
 
@@ -219,7 +234,7 @@ def process_xmrg_file(**kwargs):
                     add_db_rec_total_time += time.time() - add_db_rec_start
 
                     recsAdded += 1
-                  except Exception,e:
+                  except Exception as e:
                     if logger:
                       logger.exception(e)
                     nexrad_db_conn.db_connection.rollback()
@@ -228,7 +243,7 @@ def process_xmrg_file(**kwargs):
                 commit_recs_start = time.time()
                 nexrad_db_conn.commit()
                 commit_recs_time = time.time() - commit_recs_start
-              except Exception,e:
+              except Exception as e:
                 if logger:
                   logger.exception(e)
                 nexrad_db.db_connection.rollback()
@@ -264,7 +279,7 @@ def process_xmrg_file(**kwargs):
                     if logger:
                       logger.debug("ID: %s(%f secs) to process average for boundary: %s"\
                                    % (current_process().name, avg_total_time, boundary.name))
-                  except Exception,e:
+                  except Exception as e:
                     if logger:
                       logger.exception(e)
               resultsQueue.put(results)
@@ -279,7 +294,7 @@ def process_xmrg_file(**kwargs):
             xmrg_file_count += 1
             if logger:
               logger.debug("ID: %s(%f secs) total time to process data for file: %s" % (current_process().name, time.time() - tot_file_time_start, xmrg_filename))
-          except Exception,e:
+          except Exception as e:
             if logger:
               logger.exception(e)
 
@@ -729,7 +744,7 @@ class wqXMRGProcessing(object):
         inputQueue.put(file_name)
 
       #Start up the worker processes.
-      for workerNum in xrange(workers):
+      for workerNum in range(workers):
         args = {
           'logger': True,
           'input_queue': inputQueue,
@@ -855,7 +870,7 @@ class wqXMRGProcessing(object):
       if self.kmlTimeSeries:
         self.write_kml_time_series()
 
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)
       if self.logger is not None:
         self.logger.exception(E)
@@ -948,7 +963,7 @@ class wqXMRGProcessing(object):
       if self.save_boundary_grids_one_pass:
         self.writePrecipToKML = False
 
-    except StopIteration, e:
+    except StopIteration as e:
       if self.logger:
         self.logger.info("Date: %s Boundary data exhausted" % (xmrg_results.datetime))
 
@@ -978,7 +993,7 @@ class wqXMRGProcessing(object):
               xmrg_file.write(chunk)
             if self.logger:
               self.logger.debug("Downloaded file: %s in %f seconds." % (dest_file, time.time()-start_time))
-        except IOError,e:
+        except IOError as e:
           if self.logger:
             self.logger.exception(e)
         return dest_file
@@ -1098,7 +1113,7 @@ class wqXMRGProcessing(object):
     try:
       file_list = self.file_list_from_date_range(start_date, hour_count)
       self.logger.debug("File list has: %d files" % (len(file_list)))
-    except ConfigParser.Error, e:
+    except ConfigParser.Error as  e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -1165,7 +1180,7 @@ class wqXMRGProcessing(object):
         if self.logger:
           self.logger.debug("Boundary: %s needs %d files to fill gap." % (boundary.name, len(boundary_missing_times[boundary.name])))
         dbCursor.close()
-      except Exception,e:
+      except Exception as e:
         if self.logger:
           self.logger.exception(e)
     #Now build a non duplicate time list.
@@ -1242,11 +1257,11 @@ def main():
       logging.config.fileConfig(logConfFile)
       logger = logging.getLogger(logger_name)
       logger.info("Log file opened.")
-  except ConfigParser.Error, e:
+  except ConfigParser.Error as e:
     import traceback
     traceback.print_exc(e)
     sys.exit(-1)
-  except Exception,e:
+  except Exception as e:
     import traceback
     traceback.print_exc(e)
     sys.exit(-1)

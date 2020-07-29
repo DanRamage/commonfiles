@@ -163,7 +163,7 @@ class tide_data_file(dict):
                                               'range': float(row['Range']),
                                               'hi': float(row['Hi']),
                                               'lo': float(row['Lo'])})
-            except ValueError, e:
+            except ValueError as e:
               if self.logger:
                 self.logger("Error on line: %d" % (line_num))
                 self.logger.exception(e)

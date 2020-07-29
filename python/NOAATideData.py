@@ -1,8 +1,9 @@
 import sys
 sys.path.append('../commonfiles/python')
 import os
-from suds.client import Client
-from suds import WebFault
+#from suds.client import Client
+#from suds import WebFault
+from zeep import Client
 import time
 from datetime import datetime, timedelta
 from pytz import timezone as pytz_timezone
@@ -136,7 +137,8 @@ class noaaTideData(object):
         wlData = self.getWaterLevelRawSixMinuteData(beginDate.strftime('%Y%m%d'), endDate.strftime('%Y%m%d'), station, datum, units, timezone)
       else:
         wlData = self.getWaterLevelVerifiedSixMinuteData(beginDate.strftime('%Y%m%d'), endDate.strftime('%Y%m%d'), station, datum, units, timezone)
-    except (WebFault,Exception) as e:
+    #except (WebFault,Exception) as e:
+    except Exception as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -406,7 +408,8 @@ class noaaTideData(object):
         wlData = self.getWaterLevelRawSixMinuteData(begin_date.strftime('%Y%m%d'), end_date.strftime('%Y%m%d'), station, datum, units, time_zone)
       else:
         wlData = self.getWaterLevelVerifiedSixMinuteData(begin_date.strftime('%Y%m%d'), end_date.strftime('%Y%m%d'), station, datum, units, time_zone)
-    except (WebFault,Exception) as e:
+    except Exception as e:
+    #except (WebFault,Exception) as e:
       if self.logger:
         self.logger.exception(e)
 
@@ -500,7 +503,7 @@ class noaaTideData(object):
         prev_tide_data_rec = tide_sample
 
 
-    except Exception, e:
+    except Exception as e:
       if self.logger:
         self.logger.exception(e)
     """        
@@ -557,7 +560,10 @@ class noaaTideDataExt(noaaTideData):
                                     shift='GMT'):
     if self.logger:
       self.logger.debug("SOAP WSDL: %s" % (self.baseUrl))
-    soapClient = Client(self.baseUrl, retxml=True)
+    #This setting is for zeep
+    soapClient = Client(self.baseUrl)
+    soapClient.settings(raw_response=True)
+    #soapClient = Client(self.baseUrl, retxml=True)
     if(unit == 'feet'):
       unit = 1
     else:
@@ -618,7 +624,8 @@ class noaaTideDataExt(noaaTideData):
         wlData = self.getWaterLevelRawSixMinuteDataExt(beginDate.strftime('%Y%m%d %H:%M'), endDate.strftime('%Y%m%d %H:%M'), station, datum, units, timezone)
       else:
         wlData = self.getWaterLevelVerifiedSixMinuteDataExt(beginDate.strftime('%Y%m%d %H:%M'), endDate.strftime('%Y%m%d %H:%M'), station, datum, units, timezone)
-    except (WebFault, Exception) as e:
+    except Exception as e:
+    #except (WebFault, Exception) as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -840,7 +847,8 @@ class noaaTideDataExt(noaaTideData):
         wlData = self.getWaterLevelRawSixMinuteDataExt(beginDate.strftime('%Y%m%d'), endDate.strftime('%Y%m%d'), station, datum, units, timezone)
       else:
         wlData = self.getWaterLevelVerifiedSixMinuteDataExt(beginDate.strftime('%Y%m%d'), endDate.strftime('%Y%m%d'), station, datum, units, timezone)
-    except (WebFault, Exception) as e:
+    except Exception as e:
+    #except (WebFault, Exception) as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -1203,7 +1211,8 @@ class noaaTideDataExt(noaaTideData):
         wlData = self.getWaterLevelRawSixMinuteData(begin_date.strftime('%Y%m%d'), end_date.strftime('%Y%m%d'), station, datum, units, time_zone)
       else:
         wlData = self.getWaterLevelVerifiedSixMinuteData(begin_date.strftime('%Y%m%d'), end_date.strftime('%Y%m%d'), station, datum, units, time_zone)
-    except (WebFault,Exception) as e:
+    except Exception as e:
+    #except (WebFault,Exception) as e:
       if self.logger:
         self.logger.exception(e)
 
@@ -1297,7 +1306,7 @@ class noaaTideDataExt(noaaTideData):
         prev_tide_data_rec = tide_sample
 
       tide_data['tide_stage'] = tide_stage
-    except Exception, e:
+    except Exception as e:
       if self.logger:
         self.logger.exception(e)
 

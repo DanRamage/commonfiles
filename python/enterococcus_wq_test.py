@@ -214,13 +214,13 @@ class EnterococcusPredictionTest(predictionTest):
           try:
             self.mlrResult = pow(10,self.log10MLRResult)
             self.categorize_result()
-          except OverflowError,e:
+          except OverflowError as e:
             if self.logger:
               self.logger.exception(e)
         else:
           if self.logger:
             self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
-      except Exception,e:
+      except Exception as e:
         if self.logger:
           self.logger.exception(e)
 
@@ -325,7 +325,7 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
         else:
           if self.logger:
             self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
-      except Exception,e:
+      except Exception as e:
         if self.logger:
           self.logger.exception(e)
 

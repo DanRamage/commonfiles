@@ -1,12 +1,21 @@
 #Class borrowed from here: http://www.pastequestion.com/blog/python/send-email-with-attachments-using-python.html
 
 import smtplib, os, time, atexit
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
-from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
-from email import Encoders
- 
+import sys
+if sys.version_info[0] < 3:
+  from email.MIMEMultipart import MIMEMultipart
+  from email.MIMEBase import MIMEBase
+  from email.MIMEText import MIMEText
+  from email.Utils import COMMASPACE, formatdate
+  from email import Encoders
+
+else:
+  from email.mime.multipart import MIMEMultipart
+  from email.mime.base import MIMEBase
+  from email.mime.text import MIMEText
+  from email.utils import COMMASPACE, formatdate
+  from email import encoders as Encoders
+
 class ConnectionError(smtplib.SMTPException): pass
 class LoginError(smtplib.SMTPException): pass
 class DisconnectionError(smtplib.SMTPException): pass
@@ -45,11 +54,11 @@ class smtpClass:
         else:
           self._server = smtplib.SMTP_SSL(self._host, self._port)
           self._server.ehlo()
-      except smtplib.SMTPException, e:
+      except smtplib.SMTPException as e:
         raise ConnectionError("Connection failed!")    
       try:
         self._server.login(self._user, self._password)            
-      except smtplib.SMTPException, e:                                
+      except smtplib.SMTPException as e:
         raise e
   
   
@@ -58,7 +67,7 @@ class smtpClass:
     if self._server:
       try:
         self._server.quit()    
-      except smtplib.SMTPException, e:                                
+      except smtplib.SMTPException as e:
         raise DisconnectionError("Disconnection failed!")
   
   
@@ -112,5 +121,5 @@ class smtpClass:
       try:
               self._server.sendmail(self._from_addr, self._rcpt_to, m_message.as_string())       
   
-      except smtplib.SMTPException, e:
+      except smtplib.SMTPException as e:
               raise EmailSendError("Email has not been sent")

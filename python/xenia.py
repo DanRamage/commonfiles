@@ -11,7 +11,11 @@ Changes: Added the use of teh row_entry_date column. For code already using this
 parameter is not provided, one is created using the current localtime.
 """
 import time
-from pysqlite2 import dbapi2 as sqlite3      
+import sys
+if sys.version_info[0] < 3:
+  from pysqlite2 import dbapi2 as sqlite3
+else:
+  import sqlite3
 import psycopg2
 import psycopg2.extras
 from lxml import etree
@@ -170,17 +174,17 @@ class xeniaDB:
     try:
       self.DB.commit()
       return(True)
-    except psycopg2.Error, E:
+    except psycopg2.Error as E:
       if( E.pgerror != None ):
         self.lastErrorMsg = E.pgerror
       else:
         self.lastErrorMsg = E.message             
       self.lastErrorCode = E.pgcode
       self.procTraceback()
-    except sqlite3.Error, e:        
+    except sqlite3.Error as e:        
       self.lastErrorMsg = e.args[0]        
       self.procTraceback()
-    except Exception, e:        
+    except Exception as e:        
       self.lastErrorMsg = str(e)       
       self.procTraceback()
     return(False)
@@ -200,17 +204,17 @@ class xeniaDB:
         mType  = row[0]
         dbCursor.close()
         return( mType )
-    except psycopg2.Error, E:
+    except psycopg2.Error as E:
       if( E.pgerror != None ):
         self.lastErrorMsg = E.pgerror
       else:
         self.lastErrorMsg = E.message             
       self.lastErrorCode = E.pgcode
       self.procTraceback()
-    except sqlite3.Error, e:        
+    except sqlite3.Error as e:        
       self.lastErrorMsg = 'SQL ERROR: ' + e.args[0] + ' SQL: ' + sql
       self.procTraceback()        
-    except Exception, e:        
+    except Exception as e:        
       self.lastErrorMsg = str(e)
       self.procTraceback()           
     return( None )
@@ -535,17 +539,17 @@ class xeniaDB:
         try:
           self.DB.commit()
           return( self.organizationExists(orgInfo['short_name']))
-        except psycopg2.Error, E:
+        except psycopg2.Error as E:
           if( E.pgerror != None ):
             self.lastErrorMsg = E.pgerror
           else:
             self.lastErrorMsg = E.message             
           self.lastErrorCode = E.pgcode
           self.procTraceback()          
-        except sqlite3.Error, e:        
+        except sqlite3.Error as e:        
           self.lastErrorMsg = 'SQL ERROR: ' + e.args[0] + ' SQL: ' + sql        
           self.procTraceback()
-        except Exception, e:        
+        except Exception as e:        
           self.lastErrorMsg = str(e)       
           self.procTraceback()
     return(None)
@@ -612,17 +616,17 @@ class xeniaDB:
         try:
           self.DB.commit()
           return( self.platformExists(platformInfo['platform_handle']))
-        except psycopg2.Error, E:
+        except psycopg2.Error as E:
           if( E.pgerror != None ):
             self.lastErrorMsg = E.pgerror
           else:
             self.lastErrorMsg = E.message             
           self.lastErrorCode = E.pgcode
           self.procTraceback()          
-        except sqlite3.Error, e:        
+        except sqlite3.Error as e:        
           self.lastErrorMsg = 'SQL ERROR: ' + e.args[0] + ' SQL: ' + sql        
           self.procTraceback()
-        except Exception, e:        
+        except Exception as e:        
           self.lastErrorMsg = str(e)       
           self.procTraceback()
     return(None)
@@ -777,7 +781,7 @@ class xeniaSQLite(xeniaDB):
       #This enables the ability to manipulate rows with the column name instead of an index.
       self.DB.row_factory = sqlite3.Row
       return(True)
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)                     
       self.procTraceback()
     return(False)
@@ -795,10 +799,10 @@ class xeniaSQLite(xeniaDB):
       dbCursor = self.DB.cursor()
       dbCursor.execute( sqlQuery )        
       return( dbCursor )
-    except sqlite3.Error, e:        
+    except sqlite3.Error as e:        
       self.lastErrorMsg = 'SQL ERROR: ' + e.args[0] + ' SQL: ' + sqlQuery        
       self.procTraceback()
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)                     
       self.procTraceback()
     return(None)
@@ -817,10 +821,10 @@ class xeniaSQLite(xeniaDB):
       for row in dbCursor:
         data.append( (row[0],row[1]) )       
       dbCursor.close()
-    except sqlite3.Error, e:        
+    except sqlite3.Error as e:        
       self.lastErrorMsg = 'SQL ERROR: ' + e.args[0] + ' SQL: ' + sql        
       self.procTraceback()
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)                     
       self.procTraceback()
 
@@ -852,10 +856,10 @@ class xeniaSQLite(xeniaDB):
     try:
       dbCursor = self.executeQuery( sql )       
       return( dbCursor )
-    except sqlite3.Error, e:        
+    except sqlite3.Error as e:        
       self.lastErrorMsg = 'SQL ERROR: ' + e.args[0] + ' SQL: ' + sql        
       self.procTraceback()
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)                           
       self.procTraceback()
     return(None)
@@ -897,14 +901,14 @@ class xeniaPostGres(xeniaDB):
       #connstring = "dbname=%s user=%s host=%s password=%s" % ( dbName,user,host,passwd) 
       self.DB = psycopg2.connect( connstring )
       return(True)       
-    except psycopg2.Error, E:
+    except psycopg2.Error as E:
       if( E.pgerror != None ):
         self.lastErrorMsg = E.pgerror
       else:
         self.lastErrorMsg = E.message             
       self.lastErrorCode = E.pgcode
       self.procTraceback()
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)                     
       self.procTraceback()
     return(False)
@@ -922,14 +926,14 @@ class xeniaPostGres(xeniaDB):
       dbCursor = self.DB.cursor(cursor_factory=psycopg2.extras.DictCursor)     
       dbCursor.execute( sqlQuery )        
       return( dbCursor )
-    except psycopg2.Error, E:
+    except psycopg2.Error as E:
       if( E.pgerror != None ):
         self.lastErrorMsg = E.pgerror
       else:
         self.lastErrorMsg = E.message             
       self.lastErrorCode = E.pgcode
       self.procTraceback()
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)                     
       self.procTraceback()
     return( None )
@@ -1074,7 +1078,7 @@ class xeniaPostGres(xeniaDB):
     try:
       dbCursor = self.executeQuery( sql )       
       return( dbCursor )
-    except Exception, E:
+    except Exception as E:
       self.lastErrorMsg = str(E)                     
       self.procTraceback()
       
@@ -1130,7 +1134,7 @@ class uomconversionFunctions:
         convertedVal = float(eval( conversionString ))
         return(convertedVal)
       
-    except Exception, E:
+    except Exception as E:
       import traceback
       #DWR 2013-01-02
       #Removed the xmlTag variable since it is not needed and might not exist here.

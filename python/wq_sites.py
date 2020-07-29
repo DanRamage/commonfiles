@@ -54,7 +54,7 @@ class wq_sample_sites(sampling_sites):
 
         sites_file = open(kwargs['file_name'], "rU")
         dict_file = csv.DictReader(sites_file, delimiter=',', quotechar='"', fieldnames=header_row)
-      except IOError, e:
+      except IOError as e:
         if self.logger:
           self.logger.exception(e)
       else:
