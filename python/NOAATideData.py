@@ -1,9 +1,9 @@
 import sys
 sys.path.append('../commonfiles/python')
 import os
-#from suds.client import Client
-#from suds import WebFault
-from zeep import Client
+from suds.client import Client
+from suds import WebFault
+#from zeep import Client
 import time
 from datetime import datetime, timedelta
 from pytz import timezone as pytz_timezone
@@ -560,10 +560,7 @@ class noaaTideDataExt(noaaTideData):
                                     shift='GMT'):
     if self.logger:
       self.logger.debug("SOAP WSDL: %s" % (self.baseUrl))
-    #This setting is for zeep
-    soapClient = Client(self.baseUrl)
-    soapClient.settings(raw_response=True)
-    #soapClient = Client(self.baseUrl, retxml=True)
+    soapClient = Client(self.baseUrl, retxml=True)
     if(unit == 'feet'):
       unit = 1
     else:
