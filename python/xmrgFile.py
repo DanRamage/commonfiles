@@ -25,6 +25,7 @@ if sys.version_info[0] < 3:
   from pysqlite2 import dbapi2 as sqlite3
 else:
   import sqlite3
+  import shutil
 import datetime
 
 
@@ -127,18 +128,28 @@ class xmrgFile:
         self.compressedFilepath = self.fileName
         #SPlit the filename from the extension.
         parts = self.fileName.split('.')
-        try:
-          zipFile = gzip.GzipFile( filePath, 'rb' )
-          contents = zipFile.read()
-        except IOError as e:
-          if self.logger:
-            self.logger.error("Does not appear to be valid gzip file. Attempting normal open.")
-            self.logger.exception(e)
+        if sys.version_info[0] < 3:
+          try:
+            zipFile = gzip.GzipFile( filePath, 'rb' )
+            contents = zipFile.read()
+          except IOError as e:
+            if self.logger:
+              self.logger.error("Does not appear to be valid gzip file. Attempting normal open.")
+              self.logger.exception(e)
+          else:
+            self.fileName = parts[0]
+            self.xmrgFile = open( self.fileName, mode = 'wb' )
+            self.xmrgFile.writelines(contents)
+            self.xmrgFile.close()
         else:
-          self.fileName = parts[0]
-          self.xmrgFile = open( self.fileName, mode = 'wb' )
-          self.xmrgFile.writelines(contents)
-          self.xmrgFile.close()
+          try:
+            self.fileName = parts[0]
+            with gzip.GzipFile( filePath, 'rb' ) as zipFile, open( self.fileName, mode = 'wb' ) as self.xmrgFile:
+              shutil.copyfileobj(zipFile, self.xmrgFile)
+          except (IOError,Exception) as e:
+            if self.logger:
+              self.logger.error("Does not appear to be valid gzip file. Attempting normal open.")
+              self.logger.exception(e)
 
 
       self.xmrgFile = open( self.fileName, mode = 'rb' )
