@@ -780,10 +780,12 @@ class wqXMRGProcessing(object):
 
       #Wait for the process to finish.
       for p in processes:
+        self.logger.debug("Waiting for process: %s to complete" % (p._name))
         p.join()
 
       #Poll the queue once more to get any remaining records.
       while not resultQueue.empty():
+        self.logger.debug("Pulling records from resultsQueue.")
         self.process_result(resultQueue.get())
         rec_count += 1
 
