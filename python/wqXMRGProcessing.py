@@ -773,11 +773,10 @@ class wqXMRGProcessing(object):
       rec_count = 0
       self.logger.debug("Begin checking Queue for results")
       while any([checkJob.is_alive() for checkJob in processes]):
-
+        self.logger.debug("Processng results from worker: %s" % (checkJob._name))
         if not resultQueue.empty():
 
           #finalResults.append(resultQueue.get())
-          self.logger.debug("Processng results from worker: %s" %  (checkJob._name))
           self.process_result(resultQueue.get())
           rec_count += 1
 
