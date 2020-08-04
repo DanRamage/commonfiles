@@ -771,6 +771,7 @@ class wqXMRGProcessing(object):
       #See docs: http://docs.python.org/2/library/multiprocessing.html#multiprocessing-programming
       #the blurb on Joining processes that use queues
       rec_count = 0
+      self.logger.debug("Begin checking Queue for results")
       while any([checkJob.is_alive() for checkJob in processes]):
 
         if not resultQueue.empty():
