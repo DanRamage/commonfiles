@@ -48,6 +48,7 @@ class MainLogConfig:
         self._log_queue = Queue()
         self._log_stop_event = Event()
         self._log_listener = None
+        self._logger_name = logname
 
     def config_dict(self):
         config = dict(
@@ -109,18 +110,16 @@ class MainLogConfig:
                 'level': logging.NOTSET,
             }
         )
-        jobid = 1
-        logger_name = "logger_%d" % (jobid)
         self._log_listener = Process(target=queue_listener_process,
                                name='listener',
-                               args=(self._log_queue, self._log_stop_event, logging_config, logger_name))
+                               args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
         self._log_listener.start()
 
         log_config_main = {
             'version': 1,
             'disable_existing_loggers': False,
             'handlers': {
-                'default': {
+                self._logger_name: {
                     'level': 'DEBUG',
                     'class': 'logging.handlers.QueueHandler',
                     'queue': self._log_queue,
@@ -128,17 +127,17 @@ class MainLogConfig:
             },
             'loggers': {
                 '': {
-                    'handlers': ['default'],
+                    'handlers': [self._logger_name],
                     'level': 'DEBUG'
                 }
             }
         }
         logging.config.dictConfig(log_config_main)
-        logger = logging.getLogger()
+        logger = logging.getLogger(self._logger_name)
         logger.info("Opening log file.")
 
     def shutdown_logging(self):
-        logger = logging.getLogger()
+        logger = logging.getLogger(self._logger_name)
         logger.info("Closing log file.")
         self._log_stop_event.set()
         self._log_listener.join()
