@@ -1,6 +1,7 @@
 import logging
 import logging.config
 import logging.handlers
+from threading import Thread, current_thread
 from multiprocessing import Process, Queue, Event, current_process
 import sys
 if sys.version_info[0] < 3:
@@ -110,9 +111,14 @@ class MainLogConfig:
                 'level': logging.NOTSET,
             }
         )
+        self._log_listener = Thread(target=queue_listener_process,
+                               name='listener',
+                               args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
+        '''
         self._log_listener = Process(target=queue_listener_process,
                                name='listener',
                                args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
+        '''
         self._log_listener.start()
 
         log_config_main = {
@@ -182,7 +188,8 @@ class MyHandler(object):
         logger = logging.getLogger(record.name)
         # The process name is transformed just to show that it's the listener
         # doing the logging to files and console
-        record.processName = '%s (for %s)' % (current_process().name, record.processName)
+        #record.processName = '%s (for %s)' % (current_process().name, record.processName)
+        record.processName = '%s (for %s)' % (current_thread().name, record.processName)
         logger.handle(record)
 
 def queue_listener_process(log_msg_queue, stop_event, config, logger_name):
