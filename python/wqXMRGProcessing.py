@@ -92,7 +92,8 @@ def process_xmrg_file(**kwargs):
       logger = None
       if 'logger' in kwargs:
         if kwargs['logger']:
-          logger = logging.getLogger(current_process().name)
+          #logger = logging.getLogger(current_process().name)
+          logger = logging.getLogger()
           logger.debug("%s starting process_xmrg_file." % (current_process().name))
 
       inputQueue = kwargs['input_queue']
@@ -321,11 +322,12 @@ class wqXMRGProcessing(object):
 
     self.logger = None
     if logger:
-      self.logger = logging.getLogger(type(self).__name__)
-      self.xenia_db = None
-      self.boundaries = geometry_list(use_logger=True) #[]
-      self.sensor_ids = {}
-      self.kml_time_series = None
+      #self.logger = logging.getLogger(type(self).__name__)
+      self.logger = logging.getLogger()
+    self.xenia_db = None
+    self.boundaries = geometry_list(use_logger=True) #[]
+    self.sensor_ids = {}
+    self.kml_time_series = None
     try:
       #2011-07-25 DWR
       #Added a processing start time to use for the row_entry_date value when we add new records to the database.

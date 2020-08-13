@@ -2,106 +2,174 @@ import logging
 import logging.config
 import logging.handlers
 from multiprocessing import Process, Queue, Event, current_process
-from logutils.queue import QueueListener
+import sys
+if sys.version_info[0] < 3:
+    from logutils.queue import QueueListener
 
 
 class QueueHandler(logging.Handler):
-  """
-  This is a logging handler which sends events to a multiprocessing queue.
-
-  The plan is to add it to Python 3.2, but this can be copy pasted into
-  user code for use with earlier Python versions.
-  """
-
-  def __init__(self, queue):
     """
-    Initialise an instance, using the passed queue.
-    """
-    logging.Handler.__init__(self)
-    self.queue = queue
+    This is a logging handler which sends events to a multiprocessing queue.
 
-  def emit(self, record):
+    The plan is to add it to Python 3.2, but this can be copy pasted into
+    user code for use with earlier Python versions.
     """
-    Emit a record.
 
-    Writes the LogRecord to the queue.
-    """
-    try:
-      ei = record.exc_info
-      if ei:
-        dummy = self.format(record)  # just to get traceback text into record.exc_text
-        record.exc_info = None  # not needed any more
-      self.queue.put_nowait(record)
-    except (KeyboardInterrupt, SystemExit):
-      raise
-    except:
-      self.handleError(record)
+    def __init__(self, queue):
+        """
+        Initialise an instance, using the passed queue.
+        """
+        logging.Handler.__init__(self)
+        self.queue = queue
+
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Writes the LogRecord to the queue.
+        """
+        try:
+            ei = record.exc_info
+            if ei:
+                dummy = self.format(record)  # just to get traceback text into record.exc_text
+                record.exc_info = None  # not needed any more
+            self.queue.put_nowait(record)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
+
 
 class MainLogConfig:
-  def __init__(self, logging_queue, log_filename, level=logging.DEBUG, disable_existing_loggers=False):
-    self._queue = logging_queue
-    self._log_level = level
-    self._log_filename = log_filename
-    self._disable_existing_loggers = disable_existing_loggers
+    def __init__(self, log_filename, logname, level=logging.DEBUG, disable_existing_loggers=False):
+        self._log_level = level
+        self._log_filename = log_filename
+        self._disable_existing_loggers = disable_existing_loggers
+        self._log_queue = Queue()
+        self._log_stop_event = Event()
+        self._log_listener = None
 
-  def config_dict(self):
-    config = dict(
-      version=1,
-      disable_existing_loggers=self._disable_existing_loggers,
-      formatters={
-        'f': {
-          'format': "%(asctime)s,%(levelname)s,%(funcName)s,%(lineno)d,%(message)s",
-          'datefmt': '%Y-%m-%d %H:%M:%S'
+    def config_dict(self):
+        config = dict(
+            version=1,
+            disable_existing_loggers=self._disable_existing_loggers,
+            formatters={
+                'f': {
+                    'format': "%(asctime)s,%(levelname)s,%(funcName)s,%(lineno)d,%(message)s",
+                    'datefmt': '%Y-%m-%d %H:%M:%S'
+                }
+            },
+            handlers={
+                'stream': {
+                    'class': 'logging.StreamHandler',
+                    'formatter': 'f',
+                    'level': self._log_level
+                },
+                'file_handler': {
+                    'class': 'logging.handlers.RotatingFileHandler',
+                    'filename': self._log_filename,
+                    'formatter': 'f',
+                    'level': self._log_level,
+                    'maxBytes': 5000000,
+                    'backupCount': 3
+                }
+            },
+            root={
+                'handlers': ['stream', 'file_handler'],
+                'level': logging.NOTSET,
+            },
+        )
+        return config
+
+    def setup_logging(self):
+        logging_config = dict(
+            version=1,
+            disable_existing_loggers=False,
+            formatters={
+                'f': {
+                    'format': "%(asctime)s,%(levelname)s,%(funcName)s,%(lineno)d,%(message)s",
+                    'datefmt': '%Y-%m-%d %H:%M:%S'
+                }
+            },
+            handlers={
+                'stream': {
+                    'class': 'logging.StreamHandler',
+                    'formatter': 'f',
+                    'level': self._log_level
+                },
+                'file_handler': {
+                    'class': 'logging.FileHandler',
+                    'filename': self._log_filename,
+                    'formatter': 'f',
+                    'level': logging.DEBUG
+                }
+            },
+            root={
+                'handlers': ['stream', 'file_handler'],
+                'level': logging.NOTSET,
+            }
+        )
+        jobid = 1
+        logger_name = "logger_%d" % (jobid)
+        self._log_listener = Process(target=queue_listener_process,
+                               name='listener',
+                               args=(self._log_queue, self._log_stop_event, logging_config, logger_name))
+        self._log_listener.start()
+
+        log_config_main = {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'handlers': {
+                'default': {
+                    'level': 'DEBUG',
+                    'class': 'logging.handlers.QueueHandler',
+                    'queue': self._log_queue,
+                },
+            },
+            'loggers': {
+                '': {
+                    'handlers': ['default'],
+                    'level': 'DEBUG'
+                }
+            }
         }
-      },
-      handlers={
-        'stream': {
-          'class': 'logging.StreamHandler',
-          'formatter': 'f',
-          'level': self._log_level
-        },
-        'file_handler': {
-          'class': 'logging.handlers.RotatingFileHandler',
-          'filename': self._log_filename,
-          'formatter': 'f',
-          'level': self._log_level,
-          'maxBytes': 5000000,
-          'backupCount': 3
-        }
-      },
-      root={
-        'handlers': ['stream', 'file_handler'],
-        'level': logging.NOTSET,
-      },
-    )
-    return config
+        logging.config.dictConfig(log_config_main)
+        logger = logging.getLogger()
+        logger.info("Opening log file.")
+
+    def shutdown_logging(self):
+        logger = logging.getLogger()
+        logger.info("Closing log file.")
+        self._log_stop_event.set()
+        self._log_listener.join()
 
 
 class ClientLogConfig:
-  def __init__(self, logging_queue, logger_name='', level=logging.DEBUG, disable_existing_loggers=False):
-    self._queue = logging_queue
-    self._log_level = level
-    self._logger_name = logger_name
-    self._disable_existing_loggers = disable_existing_loggers
+    def __init__(self, logging_queue, logger_name='', level=logging.DEBUG, disable_existing_loggers=False):
+        self._queue = logging_queue
+        self._log_level = level
+        self._logger_name = logger_name
+        self._disable_existing_loggers = disable_existing_loggers
 
-  def config_dict(self):
-    logging_config = {
-        'version': 1,
-        'disable_existing_loggers': self._disable_existing_loggers,
-        'handlers': {
-          'default': {
-            'class': 'multi_process_logging.QueueHandler',
-            'queue': self._queue,
-          },
-        },
-        'loggers': {
-          self._logger_name: {
-            'handlers': ['default'],
-            'level': self._log_level
-          }
+    def config_dict(self):
+        logging_config = {
+            'version': 1,
+            'disable_existing_loggers': self._disable_existing_loggers,
+            'handlers': {
+                'default': {
+                    'class': 'multi_process_logging.QueueHandler',
+                    'queue': self._queue,
+                },
+            },
+            'loggers': {
+                self._logger_name: {
+                    'handlers': ['default'],
+                    'level': self._log_level
+                }
+            }
         }
-      }
-    return logging_config
+        return logging_config
+
 
 class MyHandler(object):
     """
@@ -110,6 +178,7 @@ class MyHandler(object):
     which then get dispatched, by the logging system, to the handlers
     configured for those loggers.
     """
+
     def handle(self, record):
         logger = logging.getLogger(record.name)
         # The process name is transformed just to show that it's the listener
@@ -117,7 +186,7 @@ class MyHandler(object):
         record.processName = '%s (for %s)' % (current_process().name, record.processName)
         logger.handle(record)
 
-def queue_listener_process(**kwargs):
+def queue_listener_process(log_msg_queue, stop_event, config, logger_name):
     """
     This could be done in the main process, but is just done in a separate
     process for illustrative purposes.
@@ -128,7 +197,33 @@ def queue_listener_process(**kwargs):
     """
     #logging.config.dictConfig(config)
     try:
-        #log_msg_queue, stop_event, config, logger_name
+        #logging.config.fileConfig(config)
+        logging.config.dictConfig(config)
+        logger = logging.getLogger(logger_name)
+        listener = logging.handlers.QueueListener(log_msg_queue, MyHandler())
+        listener.start()
+        logger.info("Log listener now running.")
+        """
+        if os.name == 'posix':
+            # On POSIX, the setup logger will have been configured in the
+            # parent process, but should have been disabled following the
+            # dictConfig call.
+            # On Windows, since fork isn't used, the setup logger won't
+            # exist in the child, so it would be created and the message
+            # would appear - hence the "if posix" clause.
+            logger.critical('Should not appear, because of disabled logger ...')
+        """
+        stop_event.wait()
+        logger.info('Logger listener shutting down.')
+        listener.stop()
+    except Exception as e:
+        print('Failed to Create Logging Listener Process')
+        raise
+
+'''
+def queue_listener_process(**kwargs):    
+    try:
+        # log_msg_queue, stop_event, config, logger_name
         log_msg_queue = kwargs['log_queue']
         stop_event = kwargs['stop_event']
         logger_name = kwargs.get('logger_name', __name__)
@@ -136,7 +231,7 @@ def queue_listener_process(**kwargs):
             logging.config.dictConfig(kwargs['dict_config'])
         else:
             logging.config.fileConfig(kwargs['file_config'])
-        #logging.config.fileConfig(config)
+        # logging.config.fileConfig(config)
         logger = logging.getLogger(logger_name)
         listener = QueueListener(log_msg_queue, MyHandler())
         listener.start()
@@ -157,5 +252,4 @@ def queue_listener_process(**kwargs):
     except Exception as e:
         print('Failed to Create Logging Listener Process')
         raise
-        
-
+'''
