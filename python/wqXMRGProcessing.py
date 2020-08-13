@@ -318,12 +318,12 @@ Want to move away form the XML config file used and use an ini file. Create a ne
 inheritting from the dhec one.
 """
 class wqXMRGProcessing(object):
-  def __init__(self, logger=True):
+  def __init__(self, logger=True, logger_name='nexrad_mp_logging'):
 
     self.logger = None
     if logger:
       #self.logger = logging.getLogger(type(self).__name__)
-      self.logger = logging.getLogger()
+      self.logger = logging.getLogger(logger_name)
     self.xenia_db = None
     self.boundaries = geometry_list(use_logger=True) #[]
     self.sensor_ids = {}
