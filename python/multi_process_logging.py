@@ -87,12 +87,15 @@ class MainLogConfig:
                                name='listener',
                                args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
         '''
+        print("mpl 1")
 
         self._log_listener = Process(target=queue_listener_process,
                                name='listener',
                                args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
+        print("mpl 2")
 
         self._log_listener.start()
+        print("mpl 3")
 
         log_config_main = {
             'version': 1,
@@ -112,6 +115,7 @@ class MainLogConfig:
                 }
             }
         }
+        print("mpl 4")
         logging.config.dictConfig(log_config_main)
         logger = logging.getLogger(self._logger_name)
         logger.debug("Opening log file.")
