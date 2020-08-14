@@ -209,12 +209,17 @@ def queue_listener_process(log_msg_queue, stop_event, config, logger_name):
     #logging.config.dictConfig(config)
     try:
         #logging.config.fileConfig(config)
+        print("qlp 1")
         logging.config.dictConfig(config)
+        print("qlp 2")
         logger = logging.getLogger()
+        print("qlp 3")
         listener = logging.handlers.QueueListener(log_msg_queue, MyHandler())
+        print("qlp 4")
         #que_handler = logging.handlers.QueueHandler(log_msg_queue)
         #listener = logging.handlers.QueueListener(log_msg_queue, que_handler)
         listener.start()
+        print("qlp 5")
         logger.debug("Log listener now running.")
         """
         if os.name == 'posix':
