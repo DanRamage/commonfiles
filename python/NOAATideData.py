@@ -30,9 +30,9 @@ class noaaTideData(object):
     self.tideChangesRawData = []
     self.tideChangesSmoothData = []
     self.use_raw = use_raw
-    self.baseUrl = 'http://opendap.co-ops.nos.noaa.gov/axis/webservices/waterlevelrawsixmin/wsdl/WaterLevelRawSixMin.wsdl'
+    self.baseUrl = 'https://opendap.co-ops.nos.noaa.gov/axis/webservices/waterlevelrawsixmin/wsdl/WaterLevelRawSixMin.wsdl'
     if not self.use_raw:
-      self.baseUrl = "http://opendap.co-ops.nos.noaa.gov/axis/webservices/waterlevelverifiedsixmin/wsdl/WaterLevelVerifiedSixMin.wsdl"
+      self.baseUrl = "https://opendap.co-ops.nos.noaa.gov/axis/webservices/waterlevelverifiedsixmin/wsdl/WaterLevelVerifiedSixMin.wsdl"
     self.logger = logger     
 
   """

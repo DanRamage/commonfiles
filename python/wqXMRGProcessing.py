@@ -91,10 +91,11 @@ def process_xmrg_file(**kwargs):
       xmrg_file_count = 1
       logger = None
       if 'logger' in kwargs:
-        if kwargs['logger']:
-          #logger = logging.getLogger(current_process().name)
-          logger = logging.getLogger()
-          logger.debug("%s starting process_xmrg_file." % (current_process().name))
+        logger_name = kwargs['logger_name']
+        logger_config = kwargs['logger_config']
+        logging.config.dictConfig(logger_config)
+        logger = logging.getLogger(logger_name)
+        logger.debug("%s starting process_xmrg_file." % (current_process().name))
 
       inputQueue = kwargs['input_queue']
       resultsQueue = kwargs['results_queue']
@@ -318,9 +319,11 @@ Want to move away form the XML config file used and use an ini file. Create a ne
 inheritting from the dhec one.
 """
 class wqXMRGProcessing(object):
-  def __init__(self, logger=True, logger_name='nexrad_mp_logging'):
+  def __init__(self, logger=True, logger_name='nexrad_mp_logging', logger_config=None):
 
     self.logger = None
+    self.logger_name = logger_name
+    self.logger_config = logger_config
     if logger:
       #self.logger = logging.getLogger(type(self).__name__)
       self.logger = logging.getLogger(logger_name)
@@ -749,6 +752,8 @@ class wqXMRGProcessing(object):
       for workerNum in range(workers):
         args = {
           'logger': True,
+          'logger_name': self.logger_name,
+          'logger_config': self.logger_config,
           'input_queue': inputQueue,
           'results_queue': resultQueue,
           'min_lat_lon': self.minLL,
@@ -841,6 +846,8 @@ class wqXMRGProcessing(object):
       for workerNum in xrange(workers):
         args = {
           'logger': True,
+          'logger_name': self.logger_name,
+          'logger_config': self.logger_config,
           'input_queue': inputQueue,
           'results_queue': resultQueue,
           'min_lat_lon': self.minLL,

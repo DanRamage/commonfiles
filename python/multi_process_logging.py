@@ -51,49 +51,19 @@ class MainLogConfig:
         self._log_listener = None
         self._logger_name = logname
 
-    def config_dict(self):
-        config = dict(
-            version=1,
-            disable_existing_loggers=self._disable_existing_loggers,
-            formatters={
-                'f': {
-                    'format': "%(asctime)s,%(levelname)s,%(funcName)s,%(lineno)d,%(message)s",
-                    'datefmt': '%Y-%m-%d %H:%M:%S'
-                }
-            },
-            handlers={
-                'stream': {
-                    'class': 'logging.StreamHandler',
-                    'formatter': 'f',
-                    'level': self._log_level
-                },
-                'file_handler': {
-                    'class': 'logging.handlers.RotatingFileHandler',
-                    'filename': self._log_filename,
-                    'formatter': 'f',
-                    'level': self._log_level,
-                    'maxBytes': 5000000,
-                    'backupCount': 3
-                }
-            },
-            root={
-                'handlers': ['stream', 'file_handler'],
-                'level': logging.NOTSET,
-            },
-        )
-        return config
-
     def setup_logging(self):
-        logging_config = dict(
-            version=1,
-            disable_existing_loggers=False,
-            formatters={
+        mp_handler = "%s_handler" % (self._logger_name)
+
+        logging_config = {
+            'version': 1,
+            'disable_existing_loggers': self._disable_existing_loggers,
+            'formatters': {
                 'f': {
                     'format': "%(asctime)s,%(levelname)s,%(funcName)s,%(lineno)d,%(message)s",
                     'datefmt': '%Y-%m-%d %H:%M:%S'
                 }
             },
-            handlers={
+            'handlers': {
                 'stream': {
                     'class': 'logging.StreamHandler',
                     'formatter': 'f',
@@ -106,11 +76,12 @@ class MainLogConfig:
                     'level': self._log_level
                 }
             },
-            root={
-                'handlers': ['file_handler', 'stream'],
+            'root': {
+                'handlers': ['file_handler'],
                 'level': logging.NOTSET,
+                'propagate': False
             }
-        )
+        }
         '''
         self._log_listener = Thread(target=queue_listener_process,
                                name='listener',
@@ -123,10 +94,9 @@ class MainLogConfig:
 
         self._log_listener.start()
 
-        mp_handler = "%s_handler" % (self._logger_name)
         log_config_main = {
             'version': 1,
-            'disable_existing_loggers': False,
+            'disable_existing_loggers': self._disable_existing_loggers,
             'handlers': {
                 mp_handler: {
                     'level': 'DEBUG',
@@ -137,7 +107,8 @@ class MainLogConfig:
             'loggers': {
                 self._logger_name: {
                     'handlers': [mp_handler],
-                    'level': 'DEBUG'
+                    'level': 'DEBUG',
+                    'propagate': False
                 }
             }
         }
@@ -145,13 +116,40 @@ class MainLogConfig:
         logger = logging.getLogger(self._logger_name)
         logger.debug("Opening log file.")
 
+    def getLogger(self):
+        logging.config.dictConfig(self.getClientConfigDict())
+        logger = logging.getLogger(self._logger_name)
+        return logger
+
+    def getClientConfigDict(self):
+        mp_handler = "%s_handler" % (self._logger_name)
+        log_config_main = {
+            'version': 1,
+            'disable_existing_loggers': self._disable_existing_loggers,
+            'handlers': {
+                mp_handler: {
+                    'level': 'DEBUG',
+                    'class': 'logging.handlers.QueueHandler',
+                    'queue': self._log_queue,
+                },
+            },
+            'loggers': {
+                self._logger_name: {
+                    'handlers': [mp_handler],
+                    'level': 'DEBUG',
+                    'propagate': False
+                }
+            }
+        }
+        return log_config_main
+
     def shutdown_logging(self):
         logger = logging.getLogger(self._logger_name)
         logger.info("Closing log file.")
         self._log_stop_event.set()
         self._log_listener.join()
 
-
+'''
 class ClientLogConfig:
     def __init__(self, logging_queue, logger_name='', level=logging.DEBUG, disable_existing_loggers=False):
         self._queue = logging_queue
@@ -177,7 +175,7 @@ class ClientLogConfig:
             }
         }
         return logging_config
-
+'''
 
 class MyHandler(object):
     """
@@ -208,10 +206,12 @@ def queue_listener_process(log_msg_queue, stop_event, config, logger_name):
     try:
         #logging.config.fileConfig(config)
         logging.config.dictConfig(config)
-        logger = logging.getLogger(logger_name)
+        logger = logging.getLogger()
         listener = logging.handlers.QueueListener(log_msg_queue, MyHandler())
+        #que_handler = logging.handlers.QueueHandler(log_msg_queue)
+        #listener = logging.handlers.QueueListener(log_msg_queue, que_handler)
         listener.start()
-        logger.info("Log listener now running.")
+        logger.debug("Log listener now running.")
         """
         if os.name == 'posix':
             # On POSIX, the setup logger will have been configured in the
@@ -223,7 +223,7 @@ def queue_listener_process(log_msg_queue, stop_event, config, logger_name):
             logger.critical('Should not appear, because of disabled logger ...')
         """
         stop_event.wait()
-        logger.info('Logger listener shutting down.')
+        logger.debug('Logger listener shutting down.')
         listener.stop()
     except Exception as e:
         print('Failed to Create Logging Listener Process')
