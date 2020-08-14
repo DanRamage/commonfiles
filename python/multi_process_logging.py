@@ -1,44 +1,44 @@
 import logging
 import logging.config
-import logging.handlers
 from threading import Thread, current_thread
 from multiprocessing import Process, Queue, Event, current_process
 import sys
 if sys.version_info[0] < 3:
+    import logging.handlers
     from logutils.queue import QueueListener
 
-
-class QueueHandler(logging.Handler):
-    """
-    This is a logging handler which sends events to a multiprocessing queue.
-
-    The plan is to add it to Python 3.2, but this can be copy pasted into
-    user code for use with earlier Python versions.
-    """
-
-    def __init__(self, queue):
+if sys.version_info[0] < 3:
+    class QueueHandler(logging.Handler):
         """
-        Initialise an instance, using the passed queue.
-        """
-        logging.Handler.__init__(self)
-        self.queue = queue
+        This is a logging handler which sends events to a multiprocessing queue.
 
-    def emit(self, record):
+        The plan is to add it to Python 3.2, but this can be copy pasted into
+        user code for use with earlier Python versions.
         """
-        Emit a record.
 
-        Writes the LogRecord to the queue.
-        """
-        try:
-            ei = record.exc_info
-            if ei:
-                dummy = self.format(record)  # just to get traceback text into record.exc_text
-                record.exc_info = None  # not needed any more
-            self.queue.put_nowait(record)
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)
+        def __init__(self, queue):
+            """
+            Initialise an instance, using the passed queue.
+            """
+            logging.Handler.__init__(self)
+            self.queue = queue
+
+        def emit(self, record):
+            """
+            Emit a record.
+
+            Writes the LogRecord to the queue.
+            """
+            try:
+                ei = record.exc_info
+                if ei:
+                    dummy = self.format(record)  # just to get traceback text into record.exc_text
+                    record.exc_info = None  # not needed any more
+                self.queue.put_nowait(record)
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except:
+                self.handleError(record)
 
 
 class MainLogConfig:
@@ -100,47 +100,50 @@ class MainLogConfig:
                     'level': self._log_level
                 },
                 'file_handler': {
-                    'class': 'logging.FileHandler',
+                    'class': 'logging.handlers.RotatingFileHandler',
                     'filename': self._log_filename,
                     'formatter': 'f',
-                    'level': logging.DEBUG
+                    'level': self._log_level
                 }
             },
             root={
-                'handlers': ['stream', 'file_handler'],
+                'handlers': ['file_handler', 'stream'],
                 'level': logging.NOTSET,
             }
         )
+        '''
         self._log_listener = Thread(target=queue_listener_process,
                                name='listener',
                                args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
         '''
+
         self._log_listener = Process(target=queue_listener_process,
                                name='listener',
                                args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
-        '''
+
         self._log_listener.start()
 
+        mp_handler = "%s_handler" % (self._logger_name)
         log_config_main = {
             'version': 1,
             'disable_existing_loggers': False,
             'handlers': {
-                self._logger_name: {
+                mp_handler: {
                     'level': 'DEBUG',
                     'class': 'logging.handlers.QueueHandler',
                     'queue': self._log_queue,
                 },
             },
             'loggers': {
-                '': {
-                    'handlers': [self._logger_name],
+                self._logger_name: {
+                    'handlers': [mp_handler],
                     'level': 'DEBUG'
                 }
             }
         }
         logging.config.dictConfig(log_config_main)
         logger = logging.getLogger(self._logger_name)
-        logger.info("Opening log file.")
+        logger.debug("Opening log file.")
 
     def shutdown_logging(self):
         logger = logging.getLogger(self._logger_name)
@@ -188,8 +191,8 @@ class MyHandler(object):
         logger = logging.getLogger(record.name)
         # The process name is transformed just to show that it's the listener
         # doing the logging to files and console
-        #record.processName = '%s (for %s)' % (current_process().name, record.processName)
-        record.processName = '%s (for %s)' % (current_thread().name, record.processName)
+        record.processName = '%s (for %s)' % (current_process().name, record.processName)
+        #record.processName = '%s (for %s)' % (current_thread().name, record.processName)
         logger.handle(record)
 
 def queue_listener_process(log_msg_queue, stop_event, config, logger_name):
