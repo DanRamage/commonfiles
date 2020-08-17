@@ -78,8 +78,12 @@ class xmrg_results(object):
     return grid_data
 
   def get_boundary_data(self):
-    for boundary_name, boundary_data in self.boundary_results.iteritems():
-      yield (boundary_name, boundary_data)
+    if sys.version_info[0] < 3:
+      for boundary_name, boundary_data in self.boundary_results.iteritems():
+        yield (boundary_name, boundary_data)
+    else:
+      for boundary_name, boundary_data in self.boundary_results.items():
+        yield (boundary_name, boundary_data)
 
   def get_boundary_names(self):
     return self.boundary_grids.keys()
@@ -912,8 +916,8 @@ class wqXMRGProcessing(object):
 
   def process_result(self, xmrg_results):
     try:
-      if not self.kmlTimeSeries and self.writePrecipToKML and xmrg_results.get_boundary_grid('complete_area') is not None:
-        if self.writePrecipToKML:
+      if self.writePrecipToKML:
+        if not self.kmlTimeSeries and self.writePrecipToKML and xmrg_results.get_boundary_grid('complete_area') is not None:
           #self.write_boundary_grid_kml('complete_area', xmrg_results.datetime, xmrg_results.get_boundary_grid('complete_area'))
           self.write_boundary_grid_kml('complete_area', xmrg_results)
 
