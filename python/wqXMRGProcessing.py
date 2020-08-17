@@ -806,6 +806,8 @@ class wqXMRGProcessing(object):
       while any([(checkJob is not None and checkJob.is_alive()) for checkJob in processes]):
         if not resultQueue.empty():
           #finalResults.append(resultQueue.get())
+          if (rec_count % 10) == 0:
+            self.logger.debug("Processed %d results" % (rec_count))
           self.process_result(resultQueue.get())
           rec_count += 1
 
