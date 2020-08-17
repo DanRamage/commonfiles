@@ -786,28 +786,35 @@ class wqXMRGProcessing(object):
       #the blurb on Joining processes that use queues
       rec_count = 0
       self.logger.debug("Begin checking Queue for results")
-      for checkJob in processes:
-        self.logger.debug("Processng results from worker: %s" % (checkJob._name))
-        if checkJob is not None and checkJob.is_alive():
-          if not resultQueue.empty():
-            self.process_result(resultQueue.get())
-            rec_count += 1
-      '''
-      while any([checkJob.is_alive() for checkJob in processes]):
+      process_queues = True
+      while process_queues:
+        for checkJob in processes:
+          self.logger.debug("Processng results from worker: %s" % (checkJob._name))
+          if checkJob is not None and checkJob.is_alive():
+            if not resultQueue.empty():
+              self.process_result(resultQueue.get())
+              rec_count += 1
+
+
+      self.logger.debug("Waiting for %d processes to complete" % (workers))
+      while any([(checkJob is not None and checkJob.is_alive()) for checkJob in processes]):
         self.logger.debug("Processng results from worker: %s" % (checkJob._name))
         if not resultQueue.empty():
 
           #finalResults.append(resultQueue.get())
           self.process_result(resultQueue.get())
           rec_count += 1
-    '''
 
+      '''
       #Wait for the process to finish.
       self.logger.debug("Waiting for %d processes to complete" % (workers))
       for p in processes:
         self.logger.debug("Waiting for process: %s to complete" % (p._name))
-        p.join()
-
+        if p.is_alive():
+          p.join()
+        else:
+          self.logger.debug("Process: %s already completed" % (p._name))
+      '''
       #Poll the queue once more to get any remaining records.
       while not resultQueue.empty():
         self.logger.debug("Pulling records from resultsQueue.")
