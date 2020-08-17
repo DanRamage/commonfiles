@@ -93,6 +93,13 @@ def process_xmrg_file(**kwargs):
       if 'logger' in kwargs:
         logger_name = kwargs['logger_name']
         logger_config = kwargs['logger_config']
+        #Each worker will set it's own filename for the filehandler
+        base_filename = logger_config['handlers']['file_handler']['filename']
+        filename_parts = os.path.split(base_filename)
+        filename, ext = os.path.splitext(filename_parts[1])
+        worker_filename = os.path.join(filename_parts[0], '%s_%s%s' %
+                                       (filename, current_process().name.replace(':', '_'), ext))
+        logger_config['handlers']['file_handler']['filename'] = worker_filename
         logging.config.dictConfig(logger_config)
         logger = logging.getLogger(logger_name)
         logger.debug("%s starting process_xmrg_file." % (current_process().name))
