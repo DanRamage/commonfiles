@@ -82,16 +82,17 @@ class MainLogConfig:
                 'propagate': False
             }
         }
+        print("mpl 1")
         '''
         self._log_listener = Thread(target=queue_listener_process,
                                name='listener',
                                args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
         '''
-        print("mpl 1")
-
         self._log_listener = Process(target=queue_listener_process,
                                name='listener',
                                args=(self._log_queue, self._log_stop_event, logging_config, self._logger_name))
+                               
+
         print("mpl 2")
 
         self._log_listener.start()
