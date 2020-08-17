@@ -798,7 +798,6 @@ class wqXMRGProcessing(object):
 
       self.logger.debug("Waiting for %d processes to complete" % (workers))
       while any([(checkJob is not None and checkJob.is_alive()) for checkJob in processes]):
-        self.logger.debug("Processng results from worker: %s" % (checkJob._name))
         if not resultQueue.empty():
 
           #finalResults.append(resultQueue.get())
