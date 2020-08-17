@@ -788,22 +788,23 @@ class wqXMRGProcessing(object):
       #If we don't empty the resultQueue periodically, the .join() below would block continously.
       #See docs: http://docs.python.org/2/library/multiprocessing.html#multiprocessing-programming
       #the blurb on Joining processes that use queues
-      rec_count = 0
+      '''
       self.logger.debug("Begin checking Queue for results")
       process_queues = True
       while process_queues:
         for checkJob in processes:
-          self.logger.debug("Processng results from worker: %s" % (checkJob._name))
+          if (rec_count % 10) == 0:
+            self.logger.debug("Processed %d results" % (rec_count))
           if checkJob is not None and checkJob.is_alive():
             if not resultQueue.empty():
               self.process_result(resultQueue.get())
               rec_count += 1
+      '''
 
-
+      rec_count = 0
       self.logger.debug("Waiting for %d processes to complete" % (workers))
       while any([(checkJob is not None and checkJob.is_alive()) for checkJob in processes]):
         if not resultQueue.empty():
-
           #finalResults.append(resultQueue.get())
           self.process_result(resultQueue.get())
           rec_count += 1
