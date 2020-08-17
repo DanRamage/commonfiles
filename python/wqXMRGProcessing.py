@@ -803,7 +803,7 @@ class wqXMRGProcessing(object):
     '''
 
       #Wait for the process to finish.
-      self.logger.debug("Waiting for %d processes to complete" % (len(workers)))
+      self.logger.debug("Waiting for %d processes to complete" % (workers))
       for p in processes:
         self.logger.debug("Waiting for process: %s to complete" % (p._name))
         p.join()
