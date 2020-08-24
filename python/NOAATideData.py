@@ -3,7 +3,7 @@ sys.path.append('../commonfiles/python')
 import os
 #from suds.client import Client
 #from suds import WebFault
-from zeep import Client
+from zeep import Client, Settings
 import time
 from datetime import datetime, timedelta
 from pytz import timezone as pytz_timezone
@@ -566,8 +566,9 @@ class noaaTideDataExt(noaaTideData):
     if self.logger:
       self.logger.debug("SOAP WSDL: %s" % (self.baseUrl))
     #soapClient = Client(self.baseUrl, retxml=True)
-    soapClient = Client(self.baseUrl)
-    soapClient.settings(raw_response=True)
+
+    settings = Settings(raw_response=True)
+    soapClient = Client(self.baseUrl, settings=settings)
 
     if(unit == 'feet'):
       unit = 1
@@ -578,7 +579,8 @@ class noaaTideDataExt(noaaTideData):
     else:
       shift = 1
 
-    ret_xml = soapClient.service.getWaterLevelRawSixMin(station, beginDate, endDate, datum, unit, shift)
+    response = soapClient.service.getWaterLevelRawSixMin(station, beginDate, endDate, datum, unit, shift)
+    ret_xml = response.text.encode("utf-8")
     if self.logger:
       self.logger.debug(ret_xml)
     parser = XMLParser(remove_blank_text=True, huge_tree=True)
