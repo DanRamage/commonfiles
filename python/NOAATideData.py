@@ -565,7 +565,10 @@ class noaaTideDataExt(noaaTideData):
                                     shift='GMT'):
     if self.logger:
       self.logger.debug("SOAP WSDL: %s" % (self.baseUrl))
-    soapClient = Client(self.baseUrl, retxml=True)
+    #soapClient = Client(self.baseUrl, retxml=True)
+    soapClient = Client(self.baseUrl)
+    soapClient.settings(raw_response=True)
+
     if(unit == 'feet'):
       unit = 1
     else:
@@ -593,7 +596,10 @@ class noaaTideDataExt(noaaTideData):
                                     datum='MLLW',
                                     unit='feet',
                                     shift='GMT'):
-    soapClient = Client(self.baseUrl, timeout=90, retxml=True)
+    #soapClient = Client(self.baseUrl, timeout=90, retxml=True)
+    soapClient = Client(self.baseUrl)
+    soapClient.settings(raw_response=True)
+
     if(unit == 'feet'):
       unit = 1
     else:
