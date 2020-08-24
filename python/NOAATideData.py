@@ -1,9 +1,9 @@
 import sys
 sys.path.append('../commonfiles/python')
 import os
-from suds.client import Client
-from suds import WebFault
-#from zeep import Client
+#from suds.client import Client
+#from suds import WebFault
+from zeep import Client
 import time
 from datetime import datetime, timedelta
 from pytz import timezone as pytz_timezone
@@ -60,7 +60,9 @@ class noaaTideData(object):
                                     unit='feet',                                    
                                     shift='GMT',
                                     retxml = False):
-    soapClient = Client(self.baseUrl, retxml=retxml)
+    #soapClient = Client(self.baseUrl, retxml=retxml)
+    soapClient = Client(self.baseUrl)
+    soapClient.settings(raw_response=retxml)
     if(unit == 'feet'):
       unit = 1
     else:
@@ -99,7 +101,10 @@ class noaaTideData(object):
                                     unit='feet',
                                     shift='GMT',
                                     retxml = False ):
-    soapClient = Client(self.baseUrl, timeout=90, retxml=retxml)
+    #soapClient = Client(self.baseUrl, timeout=90, retxml=retxml)
+    soapClient = Client(self.baseUrl)
+    soapClient.settings(raw_response=retxml)
+
     if(unit == 'feet'):
       unit = 1
     else:
