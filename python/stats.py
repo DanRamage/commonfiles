@@ -2,6 +2,9 @@
 import sys
 import math
 import operator
+if sys.version_info[0] >= 3:
+  from functools import reduce
+
 
 class statsException(Exception):
   def __init__(self,value):
@@ -40,7 +43,8 @@ class stats(object):
 
   def calc_geometric_mean(self, values):
     try:
-      geo_mean = (reduce(operator.mul, values)) ** (1.0/len(values))
+      #geo_mean = (reduce(operator.mul, values)) ** (1.0/len(values))
+      geo_mean = (reduce(operator.mul, values)) ** (1.0 / len(values))
     except ValueError as e:
       geo_mean = None
     return geo_mean
@@ -94,7 +98,9 @@ class stats(object):
         ndx_lo = int(item_count / 2) - 1
         self.median = (self.items[ndx_lo] + self.items[ndx_lo+1]) / 2.0
       else:
-        med_ndx = (item_count + 1) / 2
+        med_ndx = int((item_count + 1) / 2)
+        if med_ndx >= len(self.items):
+          med_ndx = len(self.items) - 1
         self.median = self.items[med_ndx]
       '''
       for val in self.items:
@@ -203,4 +209,21 @@ def calcAvgSpeedAndDir(speed_dir_tuples):
 
   return (spdAvg,dirAvg)
 
+def calcAvgSpeedAndDirV2(speed_dir_tuples):
+  spdAvg = None
+  dirAvg = None
+  vectObj = vectorMagDir()
+
+  #Take the tuples for speed and direction and get the vector components
+  speed_dir_components = [vectObj.calcVector(u_v[0], u_v[1]) for u_v in speed_dir_tuples]
+
+  #If we have speed and direction vectors, calc the averages.
+  if len(speed_dir_components):
+    east_avg = sum(v[0] for v in speed_dir_components) / float(len(speed_dir_components))
+    north_avg = sum(v[1] for v in speed_dir_components) / float(len(speed_dir_components))
+    #Calculate average with speed and direction components.
+    spdAvg,dirAvg = vectObj.calcMagAndDir(east_avg, north_avg)
+
+  return ({ 'scalar': (spdAvg,dirAvg),
+            'vector': (east_avg,north_avg)})
 

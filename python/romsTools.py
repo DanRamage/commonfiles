@@ -19,7 +19,8 @@ def bbox2ij(lon,lat,bbox):
     points = np.vstack((lon.flatten(),lat.flatten())).T   
     n,m = np.shape(lon)
     inside = p.contains_points(points).reshape((n,m))
-    ii,jj = np.meshgrid(xrange(m),xrange(n))
+    #ii,jj = np.meshgrid(xrange(m),xrange(n))
+    ii, jj = np.meshgrid(list(range(m)), list(range(n)))
     return min(ii[inside]),max(ii[inside]),min(jj[inside]),max(jj[inside])
 
 def closestCellFromPt(lon, lat, lonArray, latArray, obsArray, obsFillValue, landMaskArray):

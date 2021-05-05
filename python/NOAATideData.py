@@ -867,66 +867,70 @@ class noaaTideDataExt(noaaTideData):
       end_ndx = None
       #for ndx in range(0, dataLen):
       #It's seemingly impossible to use object notation to navigate to the data.
-      data_start_tag = wlData.Body.getchildren()[0].getchildren()[0].item
-      dataLen = len(data_start_tag)
-      #Get the previous 24 hours of data we are interested in.
-      for ndx in range(0, dataLen):
-        wl_time = utc_tz.localize(datetime.strptime(data_start_tag[ndx]['timeStamp'].text, '%Y-%m-%d %H:%M:%S.0'))
-        if start_ndx is None and wl_time >= beginDate:
-          start_ndx = ndx
-        if end_ndx is None and wl_time > endDate:
-          end_ndx = ndx-1
-
-      data_start_tag = data_start_tag[start_ndx:end_ndx]
-      recs = [data_start_tag[ndx]['WL'] for ndx, data in enumerate(data_start_tag)]
-      pda_maxtab, pda_mintab = pda_peakdetect(recs, None, 10, 0, False)
-      pda_tide_data = {}
-      pda_tide_data['LL'] = None
-      pda_tide_data['HH'] = None
-      pda_tide_data['L'] = None
-      pda_tide_data['H'] = None
-      pda_tide_data['PeakValue'] = None
-      pda_tide_data['ValleyValue'] = None
-      pda_tide_data['tide_stage'] = None
-
       try:
-        if len(pda_maxtab) > 0:
-          maxes = sorted(pda_maxtab, key=lambda rec: rec[1])
-          max_len = len(pda_maxtab) - 1
-          pda_tide_data['HH'] = {
-            'value': data_start_tag[int(maxes[max_len][0])]['WL'],
-            'date':  data_start_tag[int(maxes[max_len][0])]['timeStamp']
-          }
-          if max_len > 0:
-            pda_tide_data['H'] = {
-              'value': data_start_tag[int(maxes[max_len-1][0])]['WL'],
-              'date':  data_start_tag[int(maxes[max_len-1][0])]['timeStamp']
-            }
-
-        if len(pda_mintab):
-          mins = sorted(pda_mintab, key=lambda rec: rec[1], reverse=True)
-          max_len = len(pda_mintab) - 1
-          pda_tide_data['LL'] = {
-            'value': data_start_tag[int(mins[max_len][0])]['WL'],
-            'date':  data_start_tag[int(mins[max_len][0])]['timeStamp']
-          }
-          if max_len > 0:
-            pda_tide_data['L'] = {
-              'value': data_start_tag[int(mins[max_len-1][0])]['WL'],
-              'date':  data_start_tag[int(mins[max_len-1][0])]['timeStamp']
-            }
-        tide_stage = self.calc_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, write_tide_data)
-        pda_tide_data['tide_stage'] = tide_stage
-        tide_stage = self.polynomial_fit_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, write_tide_data)
-        pda_tide_data['tide_stage_fitted'] = tide_stage
-        if write_tide_data:
-          with open('/Users/danramage/tmp/tide_stage/%s.csv' % (endDate.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
-            for rec in data_start_tag:
-              tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
-
+        data_start_tag = wlData.Body.getchildren()[0].getchildren()[0].item
       except Exception as e:
-        if self.logger:
-          self.logger.exception(e)
+        self.logger.exception(e)
+      else:
+        dataLen = len(data_start_tag)
+        #Get the previous 24 hours of data we are interested in.
+        for ndx in range(0, dataLen):
+          wl_time = utc_tz.localize(datetime.strptime(data_start_tag[ndx]['timeStamp'].text, '%Y-%m-%d %H:%M:%S.0'))
+          if start_ndx is None and wl_time >= beginDate:
+            start_ndx = ndx
+          if end_ndx is None and wl_time > endDate:
+            end_ndx = ndx-1
+
+        data_start_tag = data_start_tag[start_ndx:end_ndx]
+        recs = [data_start_tag[ndx]['WL'] for ndx, data in enumerate(data_start_tag)]
+        pda_maxtab, pda_mintab = pda_peakdetect(recs, None, 10, 0, False)
+        pda_tide_data = {}
+        pda_tide_data['LL'] = None
+        pda_tide_data['HH'] = None
+        pda_tide_data['L'] = None
+        pda_tide_data['H'] = None
+        pda_tide_data['PeakValue'] = None
+        pda_tide_data['ValleyValue'] = None
+        pda_tide_data['tide_stage'] = None
+
+        try:
+          if len(pda_maxtab) > 0:
+            maxes = sorted(pda_maxtab, key=lambda rec: rec[1])
+            max_len = len(pda_maxtab) - 1
+            pda_tide_data['HH'] = {
+              'value': data_start_tag[int(maxes[max_len][0])]['WL'],
+              'date':  data_start_tag[int(maxes[max_len][0])]['timeStamp']
+            }
+            if max_len > 0:
+              pda_tide_data['H'] = {
+                'value': data_start_tag[int(maxes[max_len-1][0])]['WL'],
+                'date':  data_start_tag[int(maxes[max_len-1][0])]['timeStamp']
+              }
+
+          if len(pda_mintab):
+            mins = sorted(pda_mintab, key=lambda rec: rec[1], reverse=True)
+            max_len = len(pda_mintab) - 1
+            pda_tide_data['LL'] = {
+              'value': data_start_tag[int(mins[max_len][0])]['WL'],
+              'date':  data_start_tag[int(mins[max_len][0])]['timeStamp']
+            }
+            if max_len > 0:
+              pda_tide_data['L'] = {
+                'value': data_start_tag[int(mins[max_len-1][0])]['WL'],
+                'date':  data_start_tag[int(mins[max_len-1][0])]['timeStamp']
+              }
+          tide_stage = self.calc_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, write_tide_data)
+          pda_tide_data['tide_stage'] = tide_stage
+          tide_stage = self.polynomial_fit_tide_stage(wlData, beginDate, endDate, pytz_timezone('UTC'), 10, write_tide_data)
+          pda_tide_data['tide_stage_fitted'] = tide_stage
+          if write_tide_data:
+            with open('/Users/danramage/tmp/tide_stage/%s.csv' % (endDate.strftime('%Y-%m-%d_%H_%M')), 'w') as tide_data_out:
+              for rec in data_start_tag:
+                tide_data_out.write("%s,%f\n" % (rec['timeStamp'], rec['WL']))
+
+        except Exception as e:
+          if self.logger:
+            self.logger.exception(e)
 
     return pda_tide_data
 

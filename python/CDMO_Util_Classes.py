@@ -56,7 +56,7 @@ class sample_stations_file(OrderedDict):
             for chunk in r:
               sample_stations_file.write(chunk)
             """
-        except IOError,e:
+        except IOError as e:
           if self.logger:
             self.logger.exception(e)
 
@@ -64,7 +64,7 @@ class sample_stations_file(OrderedDict):
     try:
       reserve_file = open(file_name, "r")
       dict_file = csv.DictReader(reserve_file, delimiter=',', quotechar='"', fieldnames=sample_stations_file.header_row)
-    except IOError, e:
+    except IOError as e:
       if self.logger:
         self.logger.exception(e)
     else:
@@ -107,7 +107,7 @@ class sample_stations_file(OrderedDict):
 
         ret_val = True
 
-      except Exception, e:
+      except Exception as e:
         if self.logger:
           self.logger.exception(e)
 

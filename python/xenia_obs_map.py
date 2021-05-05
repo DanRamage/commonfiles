@@ -1,5 +1,11 @@
 import logging
 from xeniaSQLAlchemy import xeniaAlchemy, multi_obs, platform
+
+from xeniaSQLiteAlchemy import xeniaAlchemy as xeniaSQLiteAlchemy
+from xeniaSQLiteAlchemy import xeniaAlchemy as sl_xeniaAlchemy, multi_obs as sl_multi_obs, platform as sl_platform
+
+
+
 from datetime import datetime
 import json
 
@@ -67,7 +73,7 @@ class obs_map:
     return self.__sensor_id
 
   @sensor_id.setter
-  def source_index(self, sensor_id):
+  def sensor_id(self, sensor_id):
     self.__sensor_id = sensor_id
 
   @property
@@ -106,16 +112,24 @@ class json_obs_map:
       self.obs.append(xenia_obs)
 
   def build_db_mappings(self, **kwargs):
-    db = xeniaAlchemy()
-    if (db.connectDB(kwargs['db_connectionstring'],
-                     kwargs['db_user'],
-                      kwargs['db_password'],
-                      kwargs['db_host'],
-                      kwargs['db_name'],
-                     False) == True):
-      self.logger.info("Succesfully connect to DB: %s at %s" % (kwargs['db_name'], kwargs['db_host']))
+    if kwargs.get('sqlite_database_file', None) is None:
+      db = xeniaAlchemy()
+      if (db.connectDB(kwargs['db_connectionstring'],
+                       kwargs['db_user'],
+                        kwargs['db_password'],
+                        kwargs['db_host'],
+                        kwargs['db_name'],
+                       False) == True):
+        self.logger.info("Succesfully connect to DB: %s at %s" % (kwargs['db_name'], kwargs['db_host']))
+      else:
+        self.logger.error("Unable to connect to DB: %s at %s. Terminating script." % (kwargs['db_name'], kwargs['db_host']))
     else:
-      self.logger.error("Unable to connect to DB: %s at %s. Terminating script." % (kwargs['db_name'], kwargs['db_host']))
+      db_file = kwargs['sqlite_database_file']
+      db = sl_xeniaAlchemy()
+      if db.connectDB('sqlite', None, None, db_file, None, False):
+        self.logger.info("Succesfully connect to DB: %s" %(db_file))
+      else:
+        self.logger.error("Unable to connect to DB: %s" %(db_file))
 
     entry_date = datetime.now()
     for obs_rec in self.obs:

@@ -5,8 +5,14 @@ Function: remoteFileDownload.__init__
 Changes: Added logger object reference. Throughout the code, whereever a print was used, a test is now used to see
   if we have a valid logger object, if so that is used.
 """
-#import sys
-from urllib2 import Request, urlopen, URLError, HTTPError
+import sys
+if sys.version_info[0] < 3:
+  from urllib2 import Request, urlopen, URLError, HTTPError
+else:
+  import urllib.request as Request
+  from urllib.request import urlopen as urlopen
+  from urllib.error import URLError as URLError
+  from urllib.error import HTTPError as HTTPError
 import time
 import re
 import optparse
@@ -77,19 +83,19 @@ class remoteFileDownload:
         parts = row.split(' ')
         fileList.append(parts[-1])
     #handle errors
-    except HTTPError, e:
+    except HTTPError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.strLastError = "ERROR::ftpCheckForNewFiles: %s %s" %(e.code, strUrl)
       #print "HTTP Error:",e.code , strUrl
-    except URLError, e:
+    except URLError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.strLastError = "ERROR::ftpCheckForNewFiles: %s %s" %(e.reason, strUrl)
       #print "URL Error:",e.reason , strUrl
-    except Exception, e:  
+    except Exception as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
@@ -126,19 +132,19 @@ class remoteFileDownload:
           fileList.append(file)
      
     #handle errors
-    except HTTPError, e:
+    except HTTPError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.strLastError = "ERROR::httpCheckForNewFiles: %s %s" %(e.code, strUrl)
       #print "HTTP Error:",e.code , strUrl
-    except URLError, e:
+    except URLError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.strLastError = "ERROR::httpCheckForNewFiles: %s %s" %(e.reason, strUrl)
       #print "URL Error:",e.reason , strUrl
-    except Exception, e:  
+    except Exception as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
@@ -172,7 +178,7 @@ class remoteFileDownload:
       else:
         self.logMsg( "writeFetchLogFile::Creating fetchlog: %s Modtime: %d" % (strFilePath,dateTime) )
       return(1)
-    except IOError, e:
+    except IOError as e:
       self.strLastError = str(e)
       self.logMsg( self.strLastError )
     return(0)
@@ -200,7 +206,7 @@ class remoteFileDownload:
       else:
         self.logMsg( "checkFetchLogFile::Fetchlog %s exists. Modtime: %d" % (strFilePath,ModDate) )
 
-    except IOError, e:
+    except IOError as e:
       self.strLastError = str(e)
       if(self.logger != None):
         self.logger.exception(e)
@@ -307,17 +313,17 @@ class remoteFileDownload:
         retVal = strDestFilePath
         
     #handle errors
-    except HTTPError, e:
+    except HTTPError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.strLastError = "ERROR::getFile: %s %s" %(e.code, url)
-    except URLError, e:
+    except URLError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.strLastError = "ERROR::getFile: %s %s" %(e.reason, url)
-    except Exception, e:  
+    except Exception as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
@@ -354,19 +360,19 @@ class remoteFileDownload:
       return( 1 )
 
     #handle errors
-    except HTTPError, e:
+    except HTTPError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.logMsg("ERROR::getFile: %s %s" %(e.code, url))
       return(-1)
-    except URLError, e:
+    except URLError as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
         self.logMsg("ERROR::getFile: %s %s" %(e.reason, url))
       return(-1)
-    except Exception, e:  
+    except Exception as e:
       if(self.logger != None):
         self.logger.exception(e)
       else:
