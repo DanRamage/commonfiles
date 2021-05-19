@@ -1109,10 +1109,12 @@ class noaaTideDataExt(noaaTideData):
     tide_recs = data_start_tag[start_ndx:end_ndx]
     #(datetime.strptime(tide_recs[ndx]['timeStamp'].text, '%Y-%m-%d %H:%M:%S.%f')-datetime(1970, 1, 1)).total_seconds()
     recs = [(ndx,tide_recs[ndx]['WL']) for ndx, data in enumerate(tide_recs)]
-    np_recs = np.array(recs, dtype=float)
+    #np_recs = np.array(recs, dtype=float)
+    #Remove the dtype to get rud of the inhomogenous error.
+    np_recs = np.array(recs)
     # get x and y vectors
-    x = np_recs[:, 0]
-    y = np_recs[:, 1]
+    x = np_recs[:, 0].astype(float)
+    y = np_recs[:, 1].astype(float)
 
     # calculate polynomial
     z = np.polyfit(x, y, 8)
