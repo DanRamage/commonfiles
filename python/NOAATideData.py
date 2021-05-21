@@ -155,13 +155,17 @@ class noaaTideData(object):
       smoothDataROC = array.array('d')
       rawDataROC = array.array('d')
       expSmoothedData =  array.array('d')
-      dataLen = len(wlData.item)
+      #dataLen = len(wlData.item)
       ndx = 0
       alpha = 0.5
       utc_tz = pytz_timezone('UTC')
       start_ndx = None
       end_ndx = None
+      #for ndx in range(0, dataLen):
+      data_start_tag = wlData.Body.getchildren()[0].getchildren()[0].item
+      dataLen = len(data_start_tag)
       for ndx in range(0, dataLen):
+
         wl_time = utc_tz.localize(datetime.strptime(wlData.item[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
         if start_ndx is None and wl_time >= beginDate:
           start_ndx = ndx
