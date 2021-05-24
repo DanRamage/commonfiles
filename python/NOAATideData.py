@@ -162,21 +162,21 @@ class noaaTideData(object):
       start_ndx = None
       end_ndx = None
       #for ndx in range(0, dataLen):
-      data_start_tag = wlData.Body.getchildren()[0].getchildren()[0].item
-      dataLen = len(data_start_tag)
+      #data_start_tag = wlData.Body.getchildren()[0].getchildren()[0].item
+      dataLen = len(wlData)
       for ndx in range(0, dataLen):
 
-        wl_time = utc_tz.localize(datetime.strptime(wlData.item[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
+        wl_time = utc_tz.localize(datetime.strptime(wlData[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
         if start_ndx is None and wl_time >= beginDate:
           start_ndx = ndx
         if end_ndx is None and wl_time > endDate:
           end_ndx = ndx-1
-      wlData.item = wlData.item[start_ndx:end_ndx]
-      dataLen = len(wlData.item)
+      wlData = wlData[start_ndx:end_ndx]
+      dataLen = len(wlData)
       for ndx in range(0, dataLen):
-        valN = wlData.item[ndx]['WL']
+        valN = wlData[ndx]['WL']
         #tidePts.append(valN)
-        #data_ts = utc_tz.localize(datetime.strptime(wlData.item[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
+        #data_ts = utc_tz.localize(datetime.strptime(wlData[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
         #timePts.append(int(get_utc_epoch(data_ts)))
         #Then the formula for each successive point is (alpha * Xn) + (1-alpha) * Yn-1
         #X is the original data, Yn-1 is the last smoothed data point, alpha is the smoothing constant.
@@ -188,20 +188,20 @@ class noaaTideData(object):
           tideMax2 = valN
 
         else:
-          timeStruct = utc_tz.localize(datetime.strptime(wlData.item[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
+          timeStruct = utc_tz.localize(datetime.strptime(wlData[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
           timeN = int(get_utc_epoch(timeStruct))
-          timeStruct = utc_tz.localize(datetime.strptime(wlData.item[ndx-1]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
+          timeStruct = utc_tz.localize(datetime.strptime(wlData[ndx-1]['timeStamp'], '%Y-%m-%d %H:%M:%S.0'))
           timeN1 = int(get_utc_epoch(timeStruct))
 
           #For each N+1 we now use the formula.
-          Yn = (alpha * wlData.item[ndx]['WL']) + ((1 - alpha) * expSmoothedData[ndx-1])
+          Yn = (alpha * wlData[ndx]['WL']) + ((1 - alpha) * expSmoothedData[ndx-1])
           expSmoothedData.append(Yn)
 
           smoothDataROC.append((expSmoothedData[ndx] - expSmoothedData[ndx-1]) / (timeN - timeN1))
 
           #Calcuate the rateofchange
           #ROC for the raw data.
-          valN1 = wlData.item[ndx-1]['WL']
+          valN1 = wlData[ndx-1]['WL']
           rawDataROC.append((valN - valN1) / (timeN - timeN1))
 
 
@@ -224,7 +224,7 @@ class noaaTideData(object):
       if self.logger:
         self.logger.info("Checking Raw data.")
 
-      self.find_tide_change_points(wlData.item, chordLen, tideData)
+      self.find_tide_change_points(wlData, chordLen, tideData)
       if smoothData:
         print("Checking smoothed data.")
         dataLen = len(expSmoothedData)
@@ -268,9 +268,9 @@ class noaaTideData(object):
         tideFile = open(filename, "w")
 
         ndx = 0
-        dataLen = len(wlData.item)
+        dataLen = len(wlData)
         while ndx < dataLen:
-          timeStruct = time.strptime(wlData.item[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0')
+          timeStruct = time.strptime(wlData[ndx]['timeStamp'], '%Y-%m-%d %H:%M:%S.0')
           seconds = time.mktime(timeStruct)
           medianROC = ''
           rawROC = ''
@@ -280,7 +280,7 @@ class noaaTideData(object):
             smoothedROC = smoothDataROC[ndx]
             smoothedData = expSmoothedData[ndx]
 
-          outbuf = "%s,%s,%s,%s,%s\n" %(seconds,wlData.item[ndx]['WL'], rawROC, smoothedData, smoothedROC)
+          outbuf = "%s,%s,%s,%s,%s\n" %(seconds,wlData[ndx]['WL'], rawROC, smoothedData, smoothedROC)
           ndx += 1
           tideFile.write(outbuf)
         tideFile.close()
