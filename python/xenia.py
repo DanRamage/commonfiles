@@ -15,7 +15,8 @@ import sys
 if sys.version_info[0] < 3:
   from pysqlite2 import dbapi2 as sqlite3
 else:
-  import sqlite3
+  from pysqlite3 import dbapi2 as sqlite3
+
 import psycopg2
 import psycopg2.extras
 from lxml import etree

@@ -24,7 +24,9 @@ from numpy import zeros
 if sys.version_info[0] < 3:
   from pysqlite2 import dbapi2 as sqlite3
 else:
-  import sqlite3
+  #import sqlite3
+  from pysqlite3 import dbapi2 as sqlite3
+
   import shutil
 import datetime
 
@@ -90,10 +92,10 @@ class xmrgFile:
     self.lastErrorMsg = ''
     self.headerRead = False
     
-    self.earthRadius = 6371.2;
-    self.startLong   = 105.0;
-    self.startLat    = 60.0;
-    self.xmesh       = 4.7625;
+    self.earthRadius = 6371.2
+    self.startLong   = 105.0
+    self.startLat    = 60.0
+    self.xmesh       = 4.7625
     self.meshdegs    = (self.earthRadius * (1.0 + math.sin(math.radians(self.startLat)))) / self.xmesh
   
   """
@@ -860,8 +862,16 @@ class nexrad_db(object):
   Return:
   Weighted average if calculated, otherwise -9999.
   """
-  def calculate_weighted_average(self, boundary_polygon, start_time, end_time):
+  def calculate_weighted_average(self, boundary_polygon, start_time, end_time, debug_filename=None):
     weighted_avg = -9999
+    debug_file_obj = None
+    if debug_filename is not None:
+      try:
+        debug_file_obj = open(debug_filename, "w")
+        debug_file_obj.write("Percent,Precipitation,Weighted Average,Grid\n")
+      except Exception as e:
+        self.logger.exception(e)
+
     #Get the percentages that the intersecting radar grid make up of the watershed boundary.
     sql = "SELECT * FROM(\
            SELECT (Area(Intersection(radar.geom,GeomFromWKB(X'%s', 4326)))/Area(GeomFromWKB(X'%s', 4326))) as percent,\
@@ -870,6 +880,7 @@ class nexrad_db(object):
            WHERE radar.collection_date >= '%s' AND radar.collection_date <= '%s' AND\
                 Intersects(radar.geom, GeomFromWKB(X'%s', 4326)))"\
                 %(boundary_polygon.wkb_hex, boundary_polygon.wkb_hex, start_time, end_time, boundary_polygon.wkb_hex)
+
     db_cursor = self.db_connection.cursor()
     try:
       db_cursor.execute(sql)
@@ -881,6 +892,9 @@ class nexrad_db(object):
           percent = row['percent']
           precip = row['precipitation']
           total += (percent * precip)
+          if debug_file_obj:
+            debug_file_obj.write("%s,%s,%s,%s\n" % \
+                                 (row['percent'], row['precipitation'], (percent * precip), str(boundary_polygon)))
           cnt += 1
         db_cursor.close()
         if(cnt > 0):
@@ -889,6 +903,8 @@ class nexrad_db(object):
         weighted_avg = None
     except Exception as e:
       self.logger.exception(e)
+    if debug_file_obj:
+      debug_file_obj.close()
     return(weighted_avg)
 
 

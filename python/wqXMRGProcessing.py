@@ -16,7 +16,8 @@ from pytz import timezone
 import requests
 from multiprocessing import Process, Queue, current_process
 import json
-#import httplib2
+import geopandas as gpd
+import pandas as pd
 
 
 if sys.version_info[0] < 3:
@@ -32,10 +33,12 @@ import io
 if sys.version_info[0] < 3:
   from pysqlite2 import dbapi2 as sqlite3
 else:
-  import sqlite3
+  from pysqlite3 import dbapi2 as sqlite3
+  #import sqlite3
 
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, MultiPolygon
 from shapely.wkt import loads as wkt_loads
+from shapely.wkt import dumps as wkt_dumps
 
 from pykml.factory import KML_ElementMaker as KML
 
@@ -45,6 +48,7 @@ from wqDatabase import wqDB
 #from processXMRGFile import processXMRGData
 from wqHistoricalData import item_geometry, geometry_list
 from xmrgFile import xmrgFile, hrapCoord, LatLong, nexrad_db, getCollectionDateFromFilename
+from geoXmrg import geoXmrg
 import pickle
 
 class xmrg_results(object):
@@ -89,6 +93,7 @@ class xmrg_results(object):
     return self.boundary_grids.keys()
 
 def process_xmrg_file(**kwargs):
+
   try:
     try:
       processing_start_time = time.time()
@@ -123,6 +128,7 @@ def process_xmrg_file(**kwargs):
 
       save_boundary_grid_cells = True
       save_boundary_grids_one_pass = True
+      write_weighted_avg_debug = True
 
       #This is the database insert datetime.
       datetime = time.strftime( "%Y-%m-%dT%H:%M:%S", time.localtime() )
@@ -154,9 +160,14 @@ def process_xmrg_file(**kwargs):
         xmrg = xmrgFile(current_process().name)
         xmrg.openFile(xmrg_filename)
 
+        # This is the database insert datetime.
+        # Parse the filename to get the data time.
+        (directory, filetime) = os.path.split(xmrg.fileName)
+        (filetime, ext) = os.path.splitext(filetime)
+        filetime = xmrg_proc_obj.getCollectionDateFromFilename(filetime)
+
         #Data store in hundreths of mm, we want mm, so convert.
         dataConvert = 100.0
-
         if xmrg.readFileHeader():
           if logger:
             logger.debug("ID: %s File Origin: X %d Y: %d Columns: %d Rows: %d" %(current_process().name, xmrg.XOR,xmrg.YOR,xmrg.MAXX,xmrg.MAXY))
@@ -165,11 +176,6 @@ def process_xmrg_file(**kwargs):
             if xmrg.readAllRows():
               if logger:
                 logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (current_process().name, time.time() - read_rows_start, xmrg_filename))
-              #This is the database insert datetime.
-              #Parse the filename to get the data time.
-              (directory, filetime) = os.path.split(xmrg.fileName)
-              (filetime, ext) = os.path.splitext(filetime)
-              filetime = xmrg_proc_obj.getCollectionDateFromFilename(filetime)
 
               #Flag to specifiy if any non 0 values were found. No need processing the weighted averages
               #below if nothing found.
@@ -203,6 +209,7 @@ def process_xmrg_file(**kwargs):
                   latlon = xmrg.hrapCoordToLatLong(hrap)
                   latlon.longitude *= -1
                   val = xmrg.grid[row][col]
+
                   #If there is no precipitation value, or the value is erroneous
                   if val <= 0:
                     if save_all_precip_vals:
@@ -284,8 +291,10 @@ def process_xmrg_file(**kwargs):
 
 
                     avg_start_time = time.time()
+                    if write_weighted_avg_debug:
+                      wgtd_avg_file = os.path.join(directory, "%s_%s.csv" % (filetime.replace(':', '_'), boundary.name.replace(' ', '_')))
                     #avg = nexrad_db_conn.calculate_weighted_average(boundary['polygon'], filetime, filetime)
-                    avg = nexrad_db_conn.calculate_weighted_average(boundary.object_geometry, filetime, filetime)
+                    avg = nexrad_db_conn.calculate_weighted_average(boundary.object_geometry, filetime, filetime, wgtd_avg_file)
                     #results.add_boundary_result(boundary['name'], 'weighted_average', avg)
                     results.add_boundary_result(boundary.name, 'weighted_average', avg)
                     avg_total_time = time.time() - avg_start_time
@@ -324,6 +333,7 @@ def process_xmrg_file(**kwargs):
   except Exception as e:
     logger.exception(e)
   return
+
 
 """
 Want to move away form the XML config file used and use an ini file. Create a new class
@@ -758,6 +768,8 @@ class wqXMRGProcessing(object):
         self.logger.debug("Importing: %d files." % (len(file_list)))
       for file_name in file_list:
         inputQueue.put(file_name)
+
+      sqlite3.connect(":memory:").close()
 
       #Start up the worker processes.
       for workerNum in range(workers):
@@ -1267,6 +1279,251 @@ class wqXMRGProcessing(object):
       db.lastErrorMsg = ""
     db.DB.close()
     return(retVal)
+
+'''
+'''
+
+
+def process_xmrg_file_geopandas(**kwargs):
+  try:
+    try:
+      processing_start_time = time.time()
+      xmrg_file_count = 1
+      logger = None
+      if 'logger' in kwargs:
+        logger_name = kwargs['logger_name']
+        logger_config = kwargs['logger_config']
+        # Each worker will set it's own filename for the filehandler
+        base_filename = logger_config['handlers']['file_handler']['filename']
+        filename_parts = os.path.split(base_filename)
+        filename, ext = os.path.splitext(filename_parts[1])
+        worker_filename = os.path.join(filename_parts[0], '%s_%s%s' %
+                                       (filename, current_process().name.replace(':', '_'), ext))
+        logger_config['handlers']['file_handler']['filename'] = worker_filename
+        logging.config.dictConfig(logger_config)
+        logger = logging.getLogger(logger_name)
+        logger.debug("%s starting process_xmrg_file." % (current_process().name))
+
+      inputQueue = kwargs['input_queue']
+      resultsQueue = kwargs['results_queue']
+      save_all_precip_vals = kwargs['save_all_precip_vals']
+      # A course bounding box that restricts us to our area of interest.
+      minLatLong = None
+      maxLatLong = None
+      if 'min_lat_lon' in kwargs and 'max_lat_lon' in kwargs:
+        minLatLong = kwargs['min_lat_lon']
+        maxLatLong = kwargs['max_lat_lon']
+
+      # Boundaries we are creating the weighted averages for.
+      boundaries = kwargs['boundaries']
+
+      save_boundary_grid_cells = True
+      save_boundary_grids_one_pass = True
+      write_weighted_avg_debug = True
+
+      # This is the database insert datetime.
+      datetime = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+
+    except Exception as e:
+      if logger:
+        logger.exception(e)
+
+    else:
+      # Build boundary dataframes
+      boundary_frames = []
+      for boundary in boundaries:
+        df = pd.DataFrame([[boundary.name, boundary.object_geometry]], columns=['Name', 'Boundaries'])
+        boundary_df = gpd.GeoDataFrame(df, geometry=df.Boundaries)
+        boundary_df = boundary_df.drop(columns=['Boundaries'])
+        boundary_df.set_crs(epsg=4326, inplace=True)
+        boundary_frames.append(boundary_df)
+        # Write out a geojson file we can use to visualize the boundaries if needed.
+        try:
+          boundaries_outfile = os.path.join(filename_parts[0],
+                                            "%s_boundary.json" % (boundary_df['Name'][0].replace(' ', '_')))
+          boundary_df.to_file(boundaries_outfile, driver="GeoJSON")
+        except Exception as e:
+          logger.exception(e)
+      for xmrg_filename in iter(inputQueue.get, 'STOP'):
+        tot_file_time_start = time.time()
+        if logger:
+          logger.debug("ID: %s processing file: %s" % (current_process().name, xmrg_filename))
+
+        xmrg_proc_obj = wqXMRGProcessing(logger=False)
+        gpXmrg = geoXmrg(minLatLong, maxLatLong, 0.01)
+        gpXmrg.openFile(xmrg_filename)
+
+        # This is the database insert datetime.
+        # Parse the filename to get the data time.
+        (directory, filetime) = os.path.split(gpXmrg.fileName)
+        xmrg_filename = filetime
+        (filetime, ext) = os.path.splitext(filetime)
+        filetime = xmrg_proc_obj.getCollectionDateFromFilename(filetime)
+
+        if gpXmrg.readFileHeader():
+          read_rows_start = time.time()
+          gpXmrg.readAllRows()
+          if logger:
+            logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (
+              current_process().name, time.time() - read_rows_start, xmrg_filename))
+          # Save grids to file
+
+          gp_results = xmrg_results()
+          gp_results.datetime = filetime
+          # overlayed = gpd.overlay(gpXmrg._geo_data_frame, boundary_df, how="intersection")
+
+
+          for index, boundary_row in enumerate(boundary_frames):
+            file_start_time = time.time()
+            overlayed = gpd.overlay(boundary_row, gpXmrg._geo_data_frame, how="intersection", keep_geom_type=False)
+            # Here we create our percentage column by applying the function in the map(). This applies to
+            # each area.
+            overlayed['percent'] = overlayed.area.map(lambda area: float(area) / float(boundary_row.area))
+            overlayed['weighted average'] = (overlayed['Precipitation']) * (overlayed['percent'])
+
+            wghtd_avg_val = sum(overlayed['weighted average'])
+            gp_results.add_boundary_result(boundary_row['Name'][0], 'weighted_average', wghtd_avg_val)
+            logger.debug("ID: %s Processed file: %s in %f seconds." % \
+                         (current_process().name, xmrg_filename, time.time()-file_start_time))
+            resultsQueue.put(gp_results)
+
+            if write_weighted_avg_debug and wghtd_avg_val != 0:
+              wgtd_avg_file = os.path.join(directory, "%s_%s_gp.csv" % (filetime.replace(':', '_'), boundary_row['Name'][0].replace(' ', '_')))
+              try:
+                weighted_file_obj = open(wgtd_avg_file, "w")
+                weighted_file_obj.write("Percent,Precipitation,Weighted Average,Grid\n")
+                for ndx, row in overlayed.iterrows():
+                  weighted_file_obj.write("%s,%s,%s,%s\n"\
+                                          % (row['percent'], row['Precipitation'], row['weighted average'], str(row['geometry'])))
+                weighted_file_obj.close()
+              except Exception as e:
+                logger.exception(e)
+            if wghtd_avg_val != 0:
+              try:
+                overlayed_results = os.path.join(filename_parts[0],
+                                                 "%s_%s_weighted-avg_results.json" % (filetime.replace(':', '_'),
+                                                                                      boundary_row.Name[0].replace(' ',
+                                                                                                                   '_')))
+                overlayed.to_file(overlayed_results, driver="GeoJSON")
+              except Exception as e:
+                raise e
+            if save_boundary_grids_one_pass:
+              try:
+                full_data_grid = os.path.join(filename_parts[0],
+                                              "%s_%s_fullgrid_.json" % (filetime.replace(':', '_'),
+                                                                        boundary_row.Name[0].replace(' ', '_')))
+                gpXmrg._geo_data_frame.to_file(full_data_grid, driver="GeoJSON")
+                save_boundary_grids_one_pass = False
+              except Exception as e:
+                logger.exception(e)
+
+        else:
+          if logger:
+            logger.error("ID: %s Process: %s Failed to process file: %s"\
+                         % (current_process().name, current_process().name, xmrg_filename))
+
+      if logger:
+        logger.debug("ID: %s process finished. Processed: %d files in time: %f seconds" \
+                     % (current_process().name, xmrg_file_count, time.time() - processing_start_time))
+  except Exception as e:
+    logger.exception(e)
+  return
+
+
+class wqXMRGProcessingGP(wqXMRGProcessing):
+  def import_files(self, file_list):
+    if self.logger:
+      self.logger.debug("Start import_files" )
+
+      workers = self.worker_process_count
+      inputQueue = Queue()
+      resultQueue = Queue()
+      processes = []
+
+      if self.logger:
+        self.logger.debug("Importing: %d files." % (len(file_list)))
+      for file_name in file_list:
+        inputQueue.put(file_name)
+
+      #Start up the worker processes.
+      for workerNum in range(workers):
+        args = {
+          'logger': True,
+          'logger_name': self.logger_name,
+          'logger_config': self.logger_config,
+          'input_queue': inputQueue,
+          'results_queue': resultQueue,
+          'min_lat_lon': self.minLL,
+          'max_lat_lon': self.maxLL,
+          'nexrad_schema_files': self.nexrad_schema_files,
+          'nexrad_schema_directory':self.nexrad_schema_directory,
+          'save_all_precip_vals': self.saveAllPrecipVals,
+          'boundaries': self.boundaries,
+          'spatialite_lib': self.spatiaLiteLib,
+          'delete_source_file': self.deleteSourceFile,
+          'delete_compressed_source_file': self.deleteCompressedSourceFile
+        }
+        p = Process(target=process_xmrg_file_geopandas, kwargs=args)
+        if self.logger:
+          self.logger.debug("Starting process: %s" % (p._name))
+        p.start()
+        processes.append(p)
+        inputQueue.put('STOP')
+
+
+      #If we don't empty the resultQueue periodically, the .join() below would block continously.
+      #See docs: http://docs.python.org/2/library/multiprocessing.html#multiprocessing-programming
+      #the blurb on Joining processes that use queues
+      '''
+      self.logger.debug("Begin checking Queue for results")
+      process_queues = True
+      while process_queues:
+        for checkJob in processes:
+          if (rec_count % 10) == 0:
+            self.logger.debug("Processed %d results" % (rec_count))
+          if checkJob is not None and checkJob.is_alive():
+            if not resultQueue.empty():
+              self.process_result(resultQueue.get())
+              rec_count += 1
+      '''
+
+      rec_count = 0
+      self.logger.debug("Waiting for %d processes to complete" % (workers))
+      while any([(checkJob is not None and checkJob.is_alive()) for checkJob in processes]):
+        if not resultQueue.empty():
+          #finalResults.append(resultQueue.get())
+          if (rec_count % 10) == 0:
+            self.logger.debug("Processed %d results" % (rec_count))
+          self.process_result(resultQueue.get())
+          rec_count += 1
+
+      '''
+      #Wait for the process to finish.
+      self.logger.debug("Waiting for %d processes to complete" % (workers))
+      for p in processes:
+        self.logger.debug("Waiting for process: %s to complete" % (p._name))
+        if p.is_alive():
+          p.join()
+        else:
+          self.logger.debug("Process: %s already completed" % (p._name))
+      '''
+      #Poll the queue once more to get any remaining records.
+      while not resultQueue.empty():
+        self.logger.debug("Pulling records from resultsQueue.")
+        self.process_result(resultQueue.get())
+        rec_count += 1
+
+      if self.logger:
+        self.logger.debug("Imported: %d records" % (rec_count))
+
+    if self.kmlTimeSeries:
+      self.write_kml_time_series()
+
+    if self.logger:
+      self.logger.debug("Finished import_files" )
+
+    return
+
 
 
 def main():
