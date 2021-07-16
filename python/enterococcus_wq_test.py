@@ -50,10 +50,12 @@ class VB_POLY(Function):
   def _eval_evalf(self, nprec):
     #bs_val = 0
     obs_symbol,a,b,c = symbols('obs_symbol a b c')
-    poly_func = poly(a + b * obs_symbol + c * obs_symbol**2)
+    result = poly(a + b * obs_symbol + c * obs_symbol ** 2)\
+      .eval({obs_symbol: symFloat(self.args[0]), a: symFloat(self.args[1]), b: symFloat(self.args[2]), c: symFloat(self.args[3])})
+    #poly_func = poly(a + b * obs_symbol + c * obs_symbol**2)
     #if self.args[0] != 0:
     #  obs_val = symFloat(self.args[0])
-    result = poly_func.evalf(subs={obs_symbol: symFloat(self.args[0]), a: symFloat(self.args[1]), b: symFloat(self.args[2]), c: symFloat(self.args[3])})
+    #result = poly_func.evalf(subs={obs_symbol: symFloat(self.args[0]), a: symFloat(self.args[1]), b: symFloat(self.args[2]), c: symFloat(self.args[3])})
     #If the obs value is 0, then no need to calc the polynomial, the value is going
     #to be the value of "a" since "b" and "c" are zeroed out.
     return result
