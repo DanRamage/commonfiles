@@ -33,8 +33,10 @@ import io
 if sys.version_info[0] < 3:
   from pysqlite2 import dbapi2 as sqlite3
 else:
-  from pysqlite3 import dbapi2 as sqlite3
-  #import sqlite3
+  try:
+    from pysqlite3 import dbapi2 as sqlite3
+  except ImportError:
+    import sqlite3
 
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.wkt import loads as wkt_loads
