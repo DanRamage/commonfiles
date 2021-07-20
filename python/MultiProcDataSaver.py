@@ -1,11 +1,15 @@
 import sys
 sys.path.append("../commonfiles/python")
 
-from multiprocessing import Process, Queue, current_process
 from multi_process_logging import ClientLogConfig
+from multiprocessing import Process, Queue, current_process
+
 import time
 import logging.config
-import ConfigParser
+if sys.version_info[0] < 3:
+  import ConfigParser
+else:
+  import configparser as ConfigParser
 import traceback
 
 import shapely
@@ -44,7 +48,7 @@ class MPDataSaver(Process):
       log_config = ClientLogConfig(self._logging_queue)
       logging.config.dictConfig(log_config.config_dict())
 
-      logger = logging.getLogger(current_process().name)
+      logger = logging.getLogger()
       logger.debug("%s starting run." % (current_process().name))
 
       process_data = True

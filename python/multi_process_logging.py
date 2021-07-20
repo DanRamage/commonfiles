@@ -1,6 +1,10 @@
 import logging
 import logging.config
-from threading import Thread, current_thread
+#from threading import Thread, current_thread
+
+import multiprocessing
+multiprocessing.set_start_method('fork')
+
 from multiprocessing import Process, Queue, Event, current_process
 import sys
 if sys.version_info[0] < 3:
@@ -51,6 +55,10 @@ class MainLogConfig:
         self._log_listener = None
         self._logger_name = logname
 
+    @property
+    def logging_queue(self):
+        return self._log_queue
+    
     def setup_logging(self):
         mp_handler = "%s_handler" % (self._logger_name)
 
@@ -70,16 +78,15 @@ class MainLogConfig:
                     'level': self._log_level
                 },
                 'file_handler': {
-                    'class': 'logging.handlers.RotatingFileHandler',
+                    'class': 'logging.FileHandler',
                     'filename': self._log_filename,
                     'formatter': 'f',
                     'level': self._log_level
                 }
             },
             'root': {
-                'handlers': ['file_handler'],
-                'level': logging.NOTSET,
-                'propagate': False
+                'handlers': ['stream', 'file_handler'],
+                'level': logging.NOTSET
             }
         }
         '''
@@ -150,7 +157,7 @@ class MainLogConfig:
         self._log_stop_event.set()
         self._log_listener.join()
 
-'''
+
 class ClientLogConfig:
     def __init__(self, logging_queue, logger_name='', level=logging.DEBUG, disable_existing_loggers=False):
         self._queue = logging_queue
@@ -164,7 +171,7 @@ class ClientLogConfig:
             'disable_existing_loggers': self._disable_existing_loggers,
             'handlers': {
                 'default': {
-                    'class': 'multi_process_logging.QueueHandler',
+                    'class': 'logging.handlers.QueueHandler',
                     'queue': self._queue,
                 },
             },
@@ -176,7 +183,7 @@ class ClientLogConfig:
             }
         }
         return logging_config
-'''
+
 
 class MyHandler(object):
     """
@@ -206,17 +213,17 @@ def queue_listener_process(log_msg_queue, stop_event, config, logger_name):
     #logging.config.dictConfig(config)
     try:
         #logging.config.fileConfig(config)
-        print("qlp 1")
+        #print("qlp 1")
         logging.config.dictConfig(config)
-        print("qlp 2")
+        #print("qlp 2")
         logger = logging.getLogger()
-        print("qlp 3")
+        #print("qlp 3")
         listener = logging.handlers.QueueListener(log_msg_queue, MyHandler())
-        print("qlp 4")
+        #print("qlp 4")
         #que_handler = logging.handlers.QueueHandler(log_msg_queue)
         #listener = logging.handlers.QueueListener(log_msg_queue, que_handler)
         listener.start()
-        print("qlp 5")
+        #print("qlp 5")
         logger.debug("Log listener now running.")
         """
         if os.name == 'posix':
