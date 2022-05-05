@@ -253,7 +253,8 @@ class EnterococcusPredictionTest(predictionTest):
         elif self.mlrResult >= self.highCategoryLimit:
           self.predictionLevel.value = predictionLevels.HIGH
         else:
-          self.predictionLevel.value = predictionLevels.MEDIUM
+          self.predictionLevel.value = predictionLevels.LOW
+          #self.predictionLevel.value = predictionLevels.MEDIUM
     else:
       self.predictionLevel.value = predictionLevels.DISABLED
 
