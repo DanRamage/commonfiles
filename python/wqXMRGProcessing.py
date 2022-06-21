@@ -16,8 +16,6 @@ from pytz import timezone
 import requests
 from multiprocessing import Process, Queue, current_process
 import json
-import geopandas as gpd
-import pandas as pd
 
 
 if sys.version_info[0] < 3:
@@ -151,6 +149,10 @@ def process_xmrg_file(**kwargs):
     except Exception as e:
       if logger:
         logger.exception(e)
+      else:
+        import traceback
+        traceback.print_exc()
+
 
     else:
       for xmrg_filename in iter(inputQueue.get, 'STOP'):
@@ -1378,6 +1380,7 @@ def process_xmrg_file_geopandas(**kwargs):
           for index, boundary_row in enumerate(boundary_frames):
             file_start_time = time.time()
             overlayed = gpd.overlay(boundary_row, gpXmrg._geo_data_frame, how="intersection", keep_geom_type=False)
+
             # Here we create our percentage column by applying the function in the map(). This applies to
             # each area.
             overlayed['percent'] = overlayed.area.map(lambda area: float(area) / float(boundary_row.area))
@@ -1554,10 +1557,41 @@ def main():
     logger = None
     logConfFile = configFile.get('logging', 'xmrg_ingest')
     logger_name = configFile.get('logging', 'xmrg_ingest_logger_name')
+    worker_logfile_name = configFile.get('logging', 'worker_logfile_name')
     if(logConfFile):
       logging.config.fileConfig(logConfFile)
       logger = logging.getLogger(logger_name)
       logger.info("Log file opened.")
+
+    logging_config = {
+      'version': 1,
+      'disable_existing_loggers': False,
+      'formatters': {
+        'f': {
+          'format': "%(asctime)s,%(levelname)s,%(funcName)s,%(lineno)d,%(message)s",
+          'datefmt': '%Y-%m-%d %H:%M:%S'
+        }
+      },
+      'handlers': {
+        'stream': {
+          'class': 'logging.StreamHandler',
+          'formatter': 'f',
+          'level': logging.DEBUG
+        },
+        'file_handler': {
+          'class': 'logging.handlers.RotatingFileHandler',
+          'filename': worker_logfile_name,
+          'formatter': 'f',
+          'level': logging.DEBUG
+        }
+      },
+      'root': {
+        'handlers': ['file_handler'],
+        'level': logging.NOTSET,
+        'propagate': False
+      }
+    }
+
   except ConfigParser.Error as e:
     import traceback
     traceback.print_exc(e)
@@ -1567,7 +1601,7 @@ def main():
     traceback.print_exc(e)
     sys.exit(-1)
   else:
-    xmrg_proc = wqXMRGProcessing(logger=True)
+    xmrg_proc = wqXMRGProcessingGP(logger=True, logger_name='nexrad_processing', logger_config=logging_config)
     xmrg_proc.load_config_settings(config_file = options.config_file)
     if options.import_data is not None:
       if logger:

@@ -65,6 +65,13 @@ class mobile_web_services_tracking(Base):
   DateTimeStamp    = Column(DateTime)
   osInfo           = Column(Text())
 
+class StationBatteryVoltage(Base):
+  __tablename__ = 'StationBatteryVoltage'
+
+  ID = Column(Integer, primary_key=True)
+  DateTimeStamp = Column(DateTime)
+  SamplingStation = Column(String(16))
+  Voltage = Column(Float())
 
 
 class cdmo_sqlalchemy(object):

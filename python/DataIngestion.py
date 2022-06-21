@@ -5,11 +5,16 @@ Function: platformInventory::connectDB
 Changes: Added logsql parameter to allow the sqlalchmy to log out the generated SQL queries.
 """
 import logging.config
-import ConfigParser
+import sys
+if sys.version_info[0] < 3:
+  import ConfigParser
+  import Queue
+else:
+  import  configparser as ConfigParser
+  from multiprocessing import Queue
 import optparse
 
 import threading
-import Queue
 
 import shapely
 from shapely.geometry import Polygon, Point
@@ -56,7 +61,7 @@ class dataSaveWorker(threading.Thread):
         processData = False
 
         #sys.exit(-1)            
-    except ConfigParser.Error, e:  
+    except ConfigParser.Error as e:  
       if(logger):
         logger.exception(e)
     
@@ -74,14 +79,19 @@ class dataSaveWorker(threading.Thread):
               val = "%f" % (dataRec.m_value)
             logger.debug("Committing record Sensor: %d Datetime: %s Value: %s" %(dataRec.sensor_id, dataRec.m_date, val))
             if((recCount % 10) == 0):
-              logger.debug("Approximate record count in DB queue: %d" % (self.__dataQueue.qsize()))
+              try:
+                logger.debug("Approximate record count in DB queue: %d" % (self.__dataQueue.qsize()))
+              #We get this exception under OSX.
+              except NotImplementedError:
+                pass
+
           recCount += 1        
         #Trying to add record that already exists.
-        except exc.IntegrityError, e:
+        except exc.IntegrityError as e:
           db.session.rollback()        
           #if(logger):
           #  logger.debug(e.message)                          
-        except Exception, e:
+        except Exception as e:
           db.session.rollback()        
           if(logger):
             logger.exception(e)
@@ -113,7 +123,7 @@ class platformInventory:
       dbHost = config.get('Database', 'host')
       dbName = config.get('Database', 'name')
       dbConnType = config.get('Database', 'connectionstring')
-    except ConfigParser.Error, e:  
+    except ConfigParser.Error as e:  
       if(self.logger):
         self.logger.exception(e)
       return(False)
@@ -125,7 +135,7 @@ class platformInventory:
           return(True)
       else:
         self.logger.error("Unable to connect to DB: %s at %s." %(dbName,dbHost))
-    except Exception,e:
+    except Exception as e:
       self.logger.exception(e)
     return(False)
   
@@ -219,10 +229,10 @@ class xeniaDataIngestion(dataIngestion):
       dbName = self.config.get('Database', 'name')
       dbConnType = self.config.get('Database', 'connectionstring')
                  
-    except ConfigParser.Error, e:  
+    except ConfigParser.Error as e:  
       if(self.logger):
         self.logger.exception(e)
-    except Exception,e:
+    except Exception as e:
       if(self.logger):
         self.logger.exception(e)
     else:                              
@@ -237,7 +247,7 @@ class xeniaDataIngestion(dataIngestion):
           if(self.logger):
             self.logger.info("Unable to connect to DB: %s at %s" %(dbName,dbHost)) 
           return(False)          
-      except Exception,e:
+      except Exception as e:
         if(self.logger):
           self.logger.exception(e)                              
     return(False)
@@ -249,7 +259,7 @@ class xeniaDataIngestion(dataIngestion):
         if(self.logger):
           self.logger.info("Disconnected from xenia database.")
         return(True)
-    except Exception,e:
+    except Exception as e:
       if(self.logger):
         self.logger.exception(e)
         

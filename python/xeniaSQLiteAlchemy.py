@@ -852,7 +852,8 @@ class xeniaAlchemy(object):
     except exc.IntegrityError as e:
       self.session.rollback()
       if(self.logger != None):
-        self.logger.exception(e)
+        self.logger.error("Record already exists.")
+        #self.logger.exception(e)
     return(rec.row_id)
     
   
