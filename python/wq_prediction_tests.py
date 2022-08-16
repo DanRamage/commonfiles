@@ -90,17 +90,27 @@ class wqEquations(object):
     logger - A reference to the logging object to use.
   """
   def __init__(self, station, model_equation_list, use_logger=True):
-    self.station = station  #The station that this object represents.
-    self.tests = []
-    self.ensemblePrediction = predictionLevels(predictionLevels.NO_TEST)
+    self._station = station  #The station that this object represents.
+    self._tests = []
+    self._ensemblePrediction = predictionLevels(predictionLevels.NO_TEST)
     for model_equation in model_equation_list:
-      self.tests.append(model_equation)
+      self._tests.append(model_equation)
     self.data = {} #Data used for the tests.
 
     self.logger = None
     if use_logger:
       self.logger = logging.getLogger(type(self).__name__)
 
+  @property
+  def station(self):
+    return(self._station)
+
+  @property
+  def tests(self):
+    return(self._tests)
+  @property
+  def ensemblePrediction(self):
+    return(self._ensemblePrediction)
   """
   Function: addTest
   Purpose: Adds a prediction test to the list of tests.
@@ -108,7 +118,7 @@ class wqEquations(object):
     predictionTestObj -  A predictionTest object to use for testing.
   """
   def addTest(self, predictionTestObj):
-    self.tests.append(predictionTestObj)
+    self._tests.append(predictionTestObj)
 
   """
   Function: runTests
@@ -124,7 +134,7 @@ class wqEquations(object):
   def runTests(self, test_data):
     self.data = test_data.copy()
 
-    for testObj in self.tests:
+    for testObj in self._tests:
       testObj.runTest(test_data)
 
     self.overallPrediction()
@@ -139,9 +149,9 @@ class wqEquations(object):
   def overallPrediction(self):
     allTestsComplete = True
     executedTstCnt = 0
-    if len(self.tests):
+    if len(self._tests):
       sum = 0
-      for testObj in self.tests:
+      for testObj in self._tests:
         #DWR 2011-10-11
         #If a test wasn't executed, we skip using it.
         if testObj.predictionLevel.value != predictionLevels.NO_TEST and\
@@ -150,11 +160,11 @@ class wqEquations(object):
           executedTstCnt += 1
 
       if executedTstCnt:
-        self.ensemblePrediction.value = int(round(sum / float(executedTstCnt)))
+        self._ensemblePrediction.value = int(round(sum / float(executedTstCnt)))
 
 
     if self.logger is not None:
-      self.logger.debug("Overall Prediction: %d(%s)" %(self.ensemblePrediction.value, str(self.ensemblePrediction)))
-    return self.ensemblePrediction
+      self.logger.debug("Overall Prediction: %d(%s)" %(self._ensemblePrediction.value, str(self._ensemblePrediction)))
+    return self._ensemblePrediction
 
 
