@@ -44,10 +44,43 @@ class predictionTest(object):
   """
   def __init__(self, formula, name=None, enabled=True):
     self.formula = formula
-    self.predictionLevel = predictionLevels(predictionLevels.NO_TEST)
-    self.name = name
-    self.test_time = None
-    self.enabled = enabled
+    self._predictionLevel = predictionLevels(predictionLevels.NO_TEST)
+    self._name = name
+    self._test_time = None
+    self._enabled = enabled
+    self.test_type = ""
+
+  @property
+  def name(self):
+    return(self._name)
+  @name.setter
+  def name(self, name):
+    self._name = name
+  @property
+  def test_time(self):
+    return(self._test_time)
+  @test_time.setter
+  def test_time(self, test_time):
+    self._test_time = test_time
+  @property
+  def enabled(self):
+    return(self._enabled)
+  @enabled.setter
+  def enabled(self, enabled):
+    self._enabled = enabled
+  @property
+  def test_type(self):
+    return(self._test_type)
+  @test_type.setter
+  def test_type(self, test_type):
+    self._test_type = test_type
+  @property
+  def predictionLevel(self):
+    return(self._predictionLevel)
+  @predictionLevel.setter
+  def predictionLevel(self, predictionLevel):
+    self._predictionLevel = predictionLevel
+
 
   """
   Function: runTest

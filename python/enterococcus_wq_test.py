@@ -157,6 +157,7 @@ class EnterococcusPredictionTest(predictionTest):
   #def __init__(self, formula, site_name, model_name, model_enabled):
   def __init__(self, **kwargs):
     predictionTest.__init__(self, kwargs.get('formula', ''), kwargs.get('site_name', ''), kwargs.get('model_enabled', True))
+    self._test_type = "Linear Regression Equation"
     self.model_name = kwargs.get('model_name', '')
     self.lowCategoryLimit = kwargs.get('low_limit', 104.0)
     self.highCategoryLimit = kwargs.get('high_limit', 500.0)
@@ -166,7 +167,6 @@ class EnterococcusPredictionTest(predictionTest):
     self.data_used = OrderedDict()
     self.test_time = 0
     self.logger = logging.getLogger(type(self).__name__)
-
 
   """
   Function: setCategoryLimits
