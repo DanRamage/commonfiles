@@ -56,24 +56,28 @@ class predictionTest(object):
   @name.setter
   def name(self, name):
     self._name = name
+
   @property
   def test_time(self):
     return(self._test_time)
   @test_time.setter
   def test_time(self, test_time):
     self._test_time = test_time
+
   @property
   def enabled(self):
     return(self._enabled)
   @enabled.setter
   def enabled(self, enabled):
     self._enabled = enabled
+
   @property
   def test_type(self):
     return(self._test_type)
   @test_type.setter
   def test_type(self, test_type):
     self._test_type = test_type
+
   @property
   def predictionLevel(self):
     return(self._predictionLevel)
