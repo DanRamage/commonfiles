@@ -150,23 +150,27 @@ class EnterococcusPredictionTest(predictionTest):
   formula - a string with the appropriate string substitution parameters that the runTest function will
     apply the data against.
   site_name - String specifying which site the test is for.
-  model_name - String giving the name of the model.
+  _model_name - String giving the name of the model.
   model_enabled - Flag to specify if the model is to be tested.
   Return:
   """
-  #def __init__(self, formula, site_name, model_name, model_enabled):
+  #def __init__(self, formula, site_name, _model_name, model_enabled):
   def __init__(self, **kwargs):
     predictionTest.__init__(self, kwargs.get('formula', ''), kwargs.get('site_name', ''), kwargs.get('model_enabled', True))
     self._test_type = "Linear Regression Equation"
-    self.model_name = kwargs.get('model_name', '')
+    self._model_name = kwargs.get('_model_name', '')
     self.lowCategoryLimit = kwargs.get('low_limit', 104.0)
     self.highCategoryLimit = kwargs.get('high_limit', 500.0)
-    self.mlrResult = None
-    self.log10MLRResult = None
+    self._mlrResult = None
+    self._log10MLRResult = None
     self.logger = None
-    self.data_used = OrderedDict()
+    self._data_used = OrderedDict()
     self.test_time = 0
     self.logger = logging.getLogger(type(self).__name__)
+
+  @property
+  def mlrResult(self):
+    return(self._mlrResult)
 
   """
   Function: setCategoryLimits
@@ -190,12 +194,13 @@ class EnterococcusPredictionTest(predictionTest):
   def runTest(self, data):
     if self.enabled:
       if self.logger:
-        self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self.model_name, self.formula))
+        self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self._model_name, self.formula))
 
       start_time = time.time()
       try:
         #Get the variables from the formula, then verify the passed in data has the observation and a valid value.
         valid_data = True
+        self._result = None
         sym_expr = sympify(self.formula, globals())
 
         observation_variables = sym_expr.free_symbols
@@ -210,31 +215,32 @@ class EnterococcusPredictionTest(predictionTest):
           else:
             valid_data = False
         if valid_data:
-          self.log10MLRResult = sym_expr.evalf(subs=mlr_symbols)
+          self._log10MLRResult = sym_expr.evalf(subs=mlr_symbols)
           if self.logger:
-            self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.log10MLRResult, self.data_used))
+            self.logger.debug("Model: %s Result: %f Data Used: %s" % (self._model_name, self._log10MLRResult, self.data_used))
           try:
-            self.mlrResult = pow(10,self.log10MLRResult)
+            self._mlrResult = pow(10,self._log10MLRResult)
             self.categorize_result()
           except OverflowError as e:
             if self.logger:
               self.logger.exception(e)
+          self._result = self._mlrResult
         else:
           if self.logger:
-            self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
+            self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self._model_name, self.data_used))
       except Exception as e:
         if self.logger:
           self.logger.exception(e)
 
       self.test_time = time.time() - start_time
       if self.logger:
-        self.logger.debug("Test: %s execute in: %f ms" % (self.model_name, self.test_time * 1000))
+        self.logger.debug("Test: %s execute in: %f ms" % (self._model_name, self.test_time * 1000))
 
-        self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
+        self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self._model_name, self._predictionLevel))
     else:
-      self.logger.debug("Test: %s is not enabled" % (self.model_name))
-      self.predictionLevel.value = predictionLevels.DISABLED
-    return self.predictionLevel.value
+      self.logger.debug("Test: %s is not enabled" % (self._model_name))
+      self._predictionLevel.value = predictionLevels.DISABLED
+    return self._predictionLevel.value
 
   """
   Function: mlrCategorize
@@ -246,17 +252,17 @@ class EnterococcusPredictionTest(predictionTest):
   """
   def categorize_result(self):
     if self.enabled:
-      self.predictionLevel.value = predictionLevels.NO_TEST
-      if self.mlrResult is not None:
-        if self.mlrResult < self.lowCategoryLimit:
-          self.predictionLevel.value = predictionLevels.LOW
-        elif self.mlrResult >= self.highCategoryLimit:
-          self.predictionLevel.value = predictionLevels.HIGH
+      self._predictionLevel.value = predictionLevels.NO_TEST
+      if self._mlrResult is not None:
+        if self._mlrResult < self.lowCategoryLimit:
+          self._predictionLevel.value = predictionLevels.LOW
+        elif self._mlrResult >= self.highCategoryLimit:
+          self._predictionLevel.value = predictionLevels.HIGH
         else:
-          self.predictionLevel.value = predictionLevels.LOW
+          self._predictionLevel.value = predictionLevels.LOW
           #self.predictionLevel.value = predictionLevels.MEDIUM
     else:
-      self.predictionLevel.value = predictionLevels.DISABLED
+      self._predictionLevel.value = predictionLevels.DISABLED
 
   """
   Function: getResults
@@ -266,11 +272,11 @@ class EnterococcusPredictionTest(predictionTest):
   Return: A dictionary.
   """
   def get_result(self):
-    name = "%s_%s_Prediction" % (self.name, self.model_name)
+    name = "%s_%s_Prediction" % (self.name, self._model_name)
     results = {
-               name : self.predictionLevel.__str__(),
-               'log10MLRResult' : self.log10MLRResult,
-               'mlrResult' : self.mlrResult
+               name : self._predictionLevel.__str__(),
+               'log10MLRResult' : self._log10MLRResult,
+               'mlrResult' : self._mlrResult
     }
     return(results)
 
@@ -288,20 +294,22 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
   def runTest(self, data):
     if self.enabled:
       if self.logger:
-        self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self.model_name, self.formula))
+        self.logger.debug("runTest start Site: %s model name: %s formula: %s" % (self.name, self._model_name, self.formula))
 
       start_time = time.time()
       try:
         #Get the variables from the formula, then verify the passed in data has the observation and a valid value.      valid_data = True
         valid_data = True
+        self._result = None
+
         sym_expr = sympify(self.formula, globals())
 
         observation_variables = sym_expr.free_symbols
         mlr_symbols = {}
         for obs_var in observation_variables:
-          self.data_used[obs_var.name] = None
+          self._data_used[obs_var.name] = None
           if obs_var.name in data:
-            self.data_used[obs_var.name] = data[obs_var.name]
+            self._data_used[obs_var.name] = data[obs_var.name]
             if data[obs_var.name] != 0:
               mlr_symbols[obs_var] = symFloat(data[obs_var.name])
             else:
@@ -312,36 +320,37 @@ class EnterococcusPredictionTestEx(EnterococcusPredictionTest):
             valid_data = False
         if valid_data:
           try:
-            self.mlrResult = sym_expr.evalf(subs=mlr_symbols, n=4)
-            self.mlrResult = int(self.mlrResult + 0.5)
-            if self.mlrResult < 0:
-              self.mlrResult = 0
-              self.logger.debug("Model: %s negative, resetting to 0" % (self.model_name))
+            self._mlrResult = sym_expr.evalf(subs=mlr_symbols, n=4)
+            self._mlrResult = int(self.mlrResult + 0.5)
+            if self._mlrResult < 0:
+              self._mlrResult = 0
+              self.logger.debug("Model: %s negative, resetting to 0" % (self._model_name))
             if self.logger:
-              self.logger.debug("Model: %s Result: %f Data Used: %s" % (self.model_name, self.mlrResult, self.data_used))
+              self.logger.debug("Model: %s Result: %f Data Used: %s" % (self._model_name, self._mlrResult, self._data_used))
             self.categorize_result()
           except (TypeError, OverflowError) as e:
             if self.logger:
               self.logger.exception(e)
               try:
-                if math_isnan(self.mlrResult):
-                  self.mlrResult = None
+                if math_isnan(self._mlrResult):
+                  self._mlrResult = None
               except Exception as e:
                 self.logger.exception(e)
-                self.mlrResult = None
+                self._mlrResult = None
+          self.result = self._mlrResult
         else:
           if self.logger:
-            self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self.model_name, self.data_used))
+            self.logger.debug("Model: %s test not performed, one of more invalid data points: %s" % (self._model_name, self._data_used))
       except Exception as e:
         if self.logger:
           self.logger.exception(e)
 
       self.test_time = time.time() - start_time
       if self.logger:
-        self.logger.debug("Test: %s execute in: %f ms" % (self.model_name, self.test_time * 1000))
+        self.logger.debug("Test: %s execute in: %f ms" % (self._model_name, self.test_time * 1000))
 
-        self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self.model_name, self.predictionLevel))
+        self.logger.debug("runTest finished model: %s Prediction Level: %s" % (self._model_name, self._predictionLevel))
     else:
-      self.logger.debug("Test: %s not enabled." % (self.model_name))
-      self.predictionLevel.value = predictionLevels.DISABLED
-    return self.predictionLevel.value
+      self.logger.debug("Test: %s not enabled." % (self._model_name))
+      self._predictionLevel.value = predictionLevels.DISABLED
+    return self._predictionLevel.value
