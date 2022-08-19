@@ -42,29 +42,37 @@ class predictionTest(object):
     name - A string identifier for the test.
   Return:
   """
-  def __init__(self, formula, name=None, enabled=True):
+  def __init__(self, formula, model_name=None, site_name=None, enabled=True):
     self.formula = formula
     self._predictionLevel = predictionLevels(predictionLevels.NO_TEST)
-    self._site_name = name
+    self._site_name = site_name
     self._test_time = None
     self._enabled = enabled
     self._test_type = ""
     self._data_used = {}
     self._result = None
-    self._model_name = ""
+    self._model_name = model_name
 
   @property
   def name(self):
-    return(self._site_name)
+    return(self._model_name)
   @name.setter
   def name(self, name):
-    self._site_name = name
+    self._model_name = name
   @property
   def model_name(self):
     return(self._model_name)
   @model_name.setter
   def model_name(self, model_name):
     self._model_name = model_name
+
+  @property
+  def site_name(self):
+    return(self._site_name)
+  @site_name.setter
+  def model_name(self, site_name):
+    self._site_name = site_name
+
 
   @property
   def test_time(self):
@@ -98,7 +106,7 @@ class predictionTest(object):
   def result(self):
     return(self._result)
   @result.setter
-  def result_str(self, result):
+  def result(self, result):
     self._result = result
 
   @property
