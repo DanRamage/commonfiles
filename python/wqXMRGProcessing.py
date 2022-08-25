@@ -39,6 +39,8 @@ else:
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.wkt import loads as wkt_loads
 from shapely.wkt import dumps as wkt_dumps
+import pandas as pd
+import geopandas as gpd
 
 from pykml.factory import KML_ElementMaker as KML
 
