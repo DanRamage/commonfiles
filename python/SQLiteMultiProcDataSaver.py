@@ -47,7 +47,6 @@ class SQLiteMPDataSaver(Process):
       rec_count = 0
       while process_data:
         data_rec = self._data_queue.get()
-        print(data_rec)
         if data_rec is not None:
           try:
             db.session.add(data_rec)
@@ -68,7 +67,7 @@ class SQLiteMPDataSaver(Process):
               rec_count += 1
           # Trying to add record that already exists.
           except exc.IntegrityError as e:
-            #logger.error("Duplicate sensor id: %d Datetime: %s" % (data_rec.sensor_id, data_rec.m_date))
+            logger.error("Duplicate sensor id: %d Datetime: %s" % (data_rec.sensor_id, data_rec.m_date))
             db.session.rollback()
           except Exception as e:
             db.session.rollback()
