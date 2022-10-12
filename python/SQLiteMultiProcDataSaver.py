@@ -50,7 +50,6 @@ class SQLiteMPDataSaver(Process):
         if data_rec is not None:
           try:
             db.session.add(data_rec)
-            db.session.commit()
             if ((rec_count % 10) == 0):
               val = ""
               if data_rec.m_value is not None:
@@ -65,6 +64,8 @@ class SQLiteMPDataSaver(Process):
                 pass
 
               rec_count += 1
+            db.session.commit()
+
           # Trying to add record that already exists.
           except exc.IntegrityError as e:
             #logger.error("Duplicate sensor id: %d Datetime: %s" % (data_rec.sensor_id, data_rec.m_date))
