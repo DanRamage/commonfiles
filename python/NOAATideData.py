@@ -1115,7 +1115,7 @@ class noaaTideDataExt(noaaTideData):
     recs = [(ndx,tide_recs[ndx]['WL']) for ndx, data in enumerate(tide_recs)]
     #np_recs = np.array(recs, dtype=float)
     #Remove the dtype to get rud of the inhomogenous error.
-    np_recs = np.array(recs)
+    np_recs = np.array(recs, dtype=object)
     # get x and y vectors
     x = np_recs[:, 0].astype(float)
     y = np_recs[:, 1].astype(float)

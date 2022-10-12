@@ -18,8 +18,8 @@ def _datacheck_peakdetect(x_axis, y_axis):
                 'Input vectors y_axis and x_axis must have same length')
 
     #needs to be a numpy array
-    y_axis = np.array(y_axis)
-    x_axis = np.array(x_axis)
+    y_axis = np.array(y_axis, dtype=object)
+    x_axis = np.array(x_axis, dtype=object)
     return x_axis, y_axis
 
 def _peakdetect_parabole_fitter(raw_peaks, x_axis, y_axis, points):

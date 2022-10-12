@@ -166,6 +166,12 @@ class json_obs_map:
         return obs
     return None
 
+  def get_rec_from_xenia_name(self, name):
+    for obs in self.obs:
+      if obs.target_obs == name:
+        return obs
+    return None
+
   def __iter__(self):
     for obs_rec in self.obs:
       yield obs_rec
