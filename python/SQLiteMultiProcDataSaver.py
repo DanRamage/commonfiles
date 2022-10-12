@@ -63,8 +63,8 @@ class SQLiteMPDataSaver(Process):
               except NotImplementedError:
                 pass
 
-              rec_count += 1
             db.session.commit()
+            rec_count += 1
 
           # Trying to add record that already exists.
           except exc.IntegrityError as e:
