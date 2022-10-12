@@ -12,9 +12,9 @@ from xeniaSQLiteAlchemy import xeniaAlchemy as sl_xeniaAlchemy
 
 
 class SQLiteMPDataSaver(Process):
-  def __init__(self, db_filename, log_config_file):
+  def __init__(self, db_filename, log_config_file, queue):
     Process.__init__(self)
-    self._data_queue = Queue()
+    self._data_queue = queue
     self._sqlite_file = db_filename
     self._log_config_file = log_config_file
     self._stop_event = Event()
