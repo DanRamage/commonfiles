@@ -46,6 +46,7 @@ class SQLiteMPDataSaver(Process):
       start_time = time.time()
       rec_count = 0
       while process_data:
+        print(rec_count)
         data_rec = self._data_queue.get()
         if data_rec is not None:
           try:
