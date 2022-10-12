@@ -54,18 +54,18 @@ class SQLiteMPDataSaver(Process):
               val = ""
               if data_rec.m_value is not None:
                 val = "%f" % (data_rec.m_value)
-              logger.info(
-                "Committing record Sensor: %d Datetime: %s Value: %s" % (data_rec.sensor_id, data_rec.m_date, val))
 
               try:
+                logger.info(
+                  "Committing record Sensor: %d Datetime: %s Value: %s" % (data_rec.sensor_id, data_rec.m_date, val))
                 logger.info("Approximate record count in DB queue: %d" % (self._data_queue.qsize()))
               #We get this exception under OSX.
               except NotImplementedError:
                 pass
+              except Exception as e:
+                logger.exception(e)
 
             db.session.commit()
-            rec_count += 1
-
           # Trying to add record that already exists.
           except exc.IntegrityError as e:
             #logger.error("Duplicate sensor id: %d Datetime: %s" % (data_rec.sensor_id, data_rec.m_date))
@@ -73,9 +73,9 @@ class SQLiteMPDataSaver(Process):
           except Exception as e:
             db.session.rollback()
             logger.exception(e)
-
         else:
           process_data = False
+        rec_count += 1
       db.disconnect()
       logger.info("%s completed in %f seconds." % (current_process().name, time.time()-start_time))
     except Exception as e:
@@ -83,3 +83,7 @@ class SQLiteMPDataSaver(Process):
         logger.exception(e)
       else:
         traceback.print_exc(e)
+    if logger:
+      logger.info("Exiting run");
+    else:
+      print("Exiting run")
