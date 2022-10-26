@@ -993,7 +993,7 @@ class wqXMRGProcessing(object):
                                                 True,
                                                 self.processingStartTime):
                   if self.logger is not None:
-                    self.logger.debug("Platform: %s Date: %s added weighted avg: %f in %f seconds." %(platform_handle, xmrg_results.datetime, avg, time.time() - add_obs_start_time))
+                    self.logger.debug("Platform: %s Date: %s added weighted avg: %f in %f seconds." %(platform_handle, xmrg_results_data.datetime, avg, time.time() - add_obs_start_time))
               except sqlite3.IntegrityError:
                 # sql = 'UPDATE multi_obs SET(m_value=%f) WHERE m_type_id=%d AND sensor_id=%d AND m_date=date' % ()
                 try:
