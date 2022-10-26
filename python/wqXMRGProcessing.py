@@ -751,7 +751,7 @@ class wqXMRGProcessing(object):
         if self.logger:
           self.logger.debug("write_boundary_grid_kml KML outfile: %s" % (kml_outfile))
         kml_file = open(kml_outfile, "w")
-        kml_file.write(etree.tostring(kml_doc, pretty_print=True))
+        kml_file.write(etree.tostring(kml_doc, pretty_print=True).decode('UTF-8'))
         kml_file.close()
       except (IOError,Exception) as e:
         if self.logger:
@@ -935,20 +935,20 @@ class wqXMRGProcessing(object):
       if self.logger is not None:
         self.logger.exception(E)
 
-  def process_result(self, xmrg_results):
+  def process_result(self, xmrg_results_data):
     try:
       if self.writePrecipToKML:
-        if not self.kmlTimeSeries and self.writePrecipToKML and xmrg_results.get_boundary_grid('complete_area') is not None:
-          #self.write_boundary_grid_kml('complete_area', xmrg_results.datetime, xmrg_results.get_boundary_grid('complete_area'))
-          self.write_boundary_grid_kml('complete_area', xmrg_results)
+        if self.writePrecipToKML and xmrg_results_data.get_boundary_grid('complete_area') is not None:
+          #self.write_boundary_grid_kml('complete_area', xmrg_results_data.datetime, xmrg_results_data.get_boundary_grid('complete_area'))
+          self.write_boundary_grid_kml('complete_area', xmrg_results_data)
 
-      for boundary_name, boundary_results in xmrg_results.get_boundary_data():
-        if not self.kmlTimeSeries and self.writePrecipToKML and xmrg_results.get_boundary_grid(boundary_name) is not None:
-          #self.write_boundary_grid_kml(boundary_name, xmrg_results.datetime, xmrg_results.get_boundary_grid(boundary_name))
-          self.write_boundary_grid_kml(boundary_name, xmrg_results)
+      for boundary_name, boundary_results in xmrg_results_data.get_boundary_data():
+        if self.writePrecipToKML and xmrg_results_data.get_boundary_grid(boundary_name) is not None:
+          #self.write_boundary_grid_kml(boundary_name, xmrg_results_data.datetime, xmrg_results_data.get_boundary_grid(boundary_name))
+          self.write_boundary_grid_kml(boundary_name, xmrg_results_data)
 
         if self.kmlTimeSeries:
-          self.kml_time_series.append(xmrg_results)
+          self.kml_time_series.append(xmrg_results_data)
 
         platform_handle = "nws.%s.radarcoverage" % (boundary_name)
         lat = 0.0
@@ -985,7 +985,7 @@ class wqXMRGProcessing(object):
                 if self.xenia_db.addMeasurementWithMType(self.sensor_ids[platform_handle]['m_type_id'],
                                                 self.sensor_ids[platform_handle]['sensor_id'],
                                                 platform_handle,
-                                                xmrg_results.datetime,
+                                                xmrg_results_data.datetime,
                                                 lat, lon,
                                                 0,
                                                 mVals,
@@ -1001,9 +1001,9 @@ class wqXMRGProcessing(object):
                   if self.xenia_db.updateMeasurement(self.sensor_ids[platform_handle]['m_type_id'],
                                                   self.sensor_ids[platform_handle]['sensor_id'],
                                                   platform_handle,
-                                                  xmrg_results.datetime,
+                                                  xmrg_results_data.datetime,
                                                   mVals):
-                    self.logger.debug("Platform: %s Date: %s updated weighted avg: %f in %f seconds." %(platform_handle, xmrg_results.datetime, avg, time.time() - add_obs_start_time))
+                    self.logger.debug("Platform: %s Date: %s updated weighted avg: %f in %f seconds." %(platform_handle, xmrg_results_data.datetime, avg, time.time() - add_obs_start_time))
 
                 except Exception as e:
                   self.logger.exception(e)
@@ -1012,20 +1012,20 @@ class wqXMRGProcessing(object):
 
             else:
               if self.logger is not None:
-                self.logger.debug( "Platform: %s Date: %s weighted avg: %f(mm) is not valid, not adding to database." %(platform_handle, xmrg_results.datetime, avg))
+                self.logger.debug( "Platform: %s Date: %s weighted avg: %f(mm) is not valid, not adding to database." %(platform_handle, xmrg_results_data.datetime, avg))
           else:
             if self.logger is not None:
-              self.logger.debug( "Platform: %s Date: %s configuration parameter not set to add precip values of 0.0." %(platform_handle, xmrg_results.datetime))
+              self.logger.debug( "Platform: %s Date: %s configuration parameter not set to add precip values of 0.0." %(platform_handle, xmrg_results_data.datetime))
         else:
           if self.logger is not None:
-            self.logger.error( "Platform: %s Date: %s Weighted AVG error: %s" %(platform_handle, xmrg_results.datetime, self.xenia_db.getErrorInfo()) )
+            self.logger.error( "Platform: %s Date: %s Weighted AVG error: %s" %(platform_handle, xmrg_results_data.datetime, self.xenia_db.getErrorInfo()) )
             self.xenia_db.clearErrorInfo()
       if self.save_boundary_grids_one_pass:
         self.writePrecipToKML = False
 
     except StopIteration as e:
       if self.logger:
-        self.logger.info("Date: %s Boundary data exhausted" % (xmrg_results.datetime))
+        self.logger.info("Date: %s Boundary data exhausted" % (xmrg_results_data.datetime))
 
     return
 
@@ -1299,6 +1299,7 @@ def process_xmrg_file_geopandas(**kwargs):
       if 'logger' in kwargs:
         logger_name = kwargs['logger_name']
         logger_config = kwargs['logger_config']
+        debug_dir = kwargs['debug_files_directory']
         # Each worker will set it's own filename for the filehandler
         base_filename = logger_config['handlers']['file_handler']['filename']
         filename_parts = os.path.split(base_filename)
@@ -1345,7 +1346,7 @@ def process_xmrg_file_geopandas(**kwargs):
         boundary_frames.append(boundary_df)
         # Write out a geojson file we can use to visualize the boundaries if needed.
         try:
-          boundaries_outfile = os.path.join(filename_parts[0],
+          boundaries_outfile = os.path.join(debug_dir,
                                             "%s_boundary.json" % (boundary_df['Name'][0].replace(' ', '_')))
           boundary_df.to_file(boundaries_outfile, driver="GeoJSON")
         except Exception as e:
@@ -1383,6 +1384,9 @@ def process_xmrg_file_geopandas(**kwargs):
             file_start_time = time.time()
             overlayed = gpd.overlay(boundary_row, gpXmrg._geo_data_frame, how="intersection", keep_geom_type=False)
 
+            if save_boundary_grid_cells:
+              for ndx, row in overlayed.iterrows():
+                gp_results.add_grid(row.Name, (row.geometry,row.Precipitation))
             # Here we create our percentage column by applying the function in the map(). This applies to
             # each area.
             overlayed['percent'] = overlayed.area.map(lambda area: float(area) / float(boundary_row.area))
@@ -1392,10 +1396,10 @@ def process_xmrg_file_geopandas(**kwargs):
             gp_results.add_boundary_result(boundary_row['Name'][0], 'weighted_average', wghtd_avg_val)
             logger.debug("ID: %s Processed file: %s in %f seconds." % \
                          (current_process().name, xmrg_filename, time.time()-file_start_time))
-            resultsQueue.put(gp_results)
+
 
             if write_weighted_avg_debug and wghtd_avg_val != 0:
-              wgtd_avg_file = os.path.join(directory, "%s_%s_gp.csv" % (filetime.replace(':', '_'), boundary_row['Name'][0].replace(' ', '_')))
+              wgtd_avg_file = os.path.join(debug_dir, "%s_%s_gp.csv" % (filetime.replace(':', '_'), boundary_row['Name'][0].replace(' ', '_')))
               try:
                 weighted_file_obj = open(wgtd_avg_file, "w")
                 weighted_file_obj.write("Percent,Precipitation,Weighted Average,Grid\n")
@@ -1407,7 +1411,7 @@ def process_xmrg_file_geopandas(**kwargs):
                 logger.exception(e)
             if wghtd_avg_val != 0:
               try:
-                overlayed_results = os.path.join(filename_parts[0],
+                overlayed_results = os.path.join(debug_dir,
                                                  "%s_%s_weighted-avg_results.json" % (filetime.replace(':', '_'),
                                                                                       boundary_row.Name[0].replace(' ',
                                                                                                                    '_')))
@@ -1416,13 +1420,15 @@ def process_xmrg_file_geopandas(**kwargs):
                 raise e
             if save_boundary_grids_one_pass:
               try:
-                full_data_grid = os.path.join(filename_parts[0],
+                full_data_grid = os.path.join(debug_dir,
                                               "%s_%s_fullgrid_.json" % (filetime.replace(':', '_'),
                                                                         boundary_row.Name[0].replace(' ', '_')))
                 gpXmrg._geo_data_frame.to_file(full_data_grid, driver="GeoJSON")
                 save_boundary_grids_one_pass = False
               except Exception as e:
                 logger.exception(e)
+
+          resultsQueue.put(gp_results)
 
         else:
           if logger:
@@ -1468,7 +1474,8 @@ class wqXMRGProcessingGP(wqXMRGProcessing):
           'boundaries': self.boundaries,
           'spatialite_lib': self.spatiaLiteLib,
           'delete_source_file': self.deleteSourceFile,
-          'delete_compressed_source_file': self.deleteCompressedSourceFile
+          'delete_compressed_source_file': self.deleteCompressedSourceFile,
+          'debug_files_directory': self.KMLDir
         }
         p = Process(target=process_xmrg_file_geopandas, kwargs=args)
         if self.logger:
@@ -1588,7 +1595,7 @@ def main():
         }
       },
       'root': {
-        'handlers': ['file_handler'],
+        'handlers': ['file_handler', 'stream'],
         'level': logging.NOTSET,
         'propagate': False
       }
