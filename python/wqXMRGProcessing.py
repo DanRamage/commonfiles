@@ -1595,7 +1595,7 @@ def main():
         }
       },
       'root': {
-        'handlers': ['file_handler', 'stream'],
+        'handlers': ['file_handler'],
         'level': logging.NOTSET,
         'propagate': False
       }
