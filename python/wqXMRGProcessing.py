@@ -1358,83 +1358,93 @@ def process_xmrg_file_geopandas(**kwargs):
 
         xmrg_proc_obj = wqXMRGProcessing(logger=False)
         gpXmrg = geoXmrg(minLatLong, maxLatLong, 0.01)
-        gpXmrg.openFile(xmrg_filename)
-
-        # This is the database insert datetime.
-        # Parse the filename to get the data time.
-        (directory, filetime) = os.path.split(gpXmrg.fileName)
-        xmrg_filename = filetime
-        (filetime, ext) = os.path.splitext(filetime)
-        filetime = xmrg_proc_obj.getCollectionDateFromFilename(filetime)
-
-        if gpXmrg.readFileHeader():
-          read_rows_start = time.time()
-          gpXmrg.readAllRows()
-          if logger:
-            logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (
-              current_process().name, time.time() - read_rows_start, xmrg_filename))
-          # Save grids to file
-
-          gp_results = xmrg_results()
-          gp_results.datetime = filetime
-          # overlayed = gpd.overlay(gpXmrg._geo_data_frame, boundary_df, how="intersection")
-
-
-          for index, boundary_row in enumerate(boundary_frames):
-            file_start_time = time.time()
-            overlayed = gpd.overlay(boundary_row, gpXmrg._geo_data_frame, how="intersection", keep_geom_type=False)
-
-            if save_boundary_grid_cells:
-              for ndx, row in overlayed.iterrows():
-                gp_results.add_grid(row.Name, (row.geometry,row.Precipitation))
-            # Here we create our percentage column by applying the function in the map(). This applies to
-            # each area.
-            overlayed['percent'] = overlayed.area.map(lambda area: float(area) / float(boundary_row.area))
-            overlayed['weighted average'] = (overlayed['Precipitation']) * (overlayed['percent'])
-
-            wghtd_avg_val = sum(overlayed['weighted average'])
-            gp_results.add_boundary_result(boundary_row['Name'][0], 'weighted_average', wghtd_avg_val)
-            logger.debug("ID: %s Processed file: %s in %f seconds." % \
-                         (current_process().name, xmrg_filename, time.time()-file_start_time))
-
-
-            if write_weighted_avg_debug and wghtd_avg_val != 0:
-              wgtd_avg_file = os.path.join(debug_dir, "%s_%s_gp.csv" % (filetime.replace(':', '_'), boundary_row['Name'][0].replace(' ', '_')))
-              try:
-                weighted_file_obj = open(wgtd_avg_file, "w")
-                weighted_file_obj.write("Percent,Precipitation,Weighted Average,Grid\n")
-                for ndx, row in overlayed.iterrows():
-                  weighted_file_obj.write("%s,%s,%s,%s\n"\
-                                          % (row['percent'], row['Precipitation'], row['weighted average'], str(row['geometry'])))
-                weighted_file_obj.close()
-              except Exception as e:
-                logger.exception(e)
-            if wghtd_avg_val != 0:
-              try:
-                overlayed_results = os.path.join(debug_dir,
-                                                 "%s_%s_weighted-avg_results.json" % (filetime.replace(':', '_'),
-                                                                                      boundary_row.Name[0].replace(' ',
-                                                                                                                   '_')))
-                overlayed.to_file(overlayed_results, driver="GeoJSON")
-              except Exception as e:
-                raise e
-            if save_boundary_grids_one_pass:
-              try:
-                full_data_grid = os.path.join(debug_dir,
-                                              "%s_%s_fullgrid_.json" % (filetime.replace(':', '_'),
-                                                                        boundary_row.Name[0].replace(' ', '_')))
-                gpXmrg._geo_data_frame.to_file(full_data_grid, driver="GeoJSON")
-                save_boundary_grids_one_pass = False
-              except Exception as e:
-                logger.exception(e)
-
-          resultsQueue.put(gp_results)
-
+        try:
+          gpXmrg.openFile(xmrg_filename)
+        except Exception as e:
+          logger.error("ID: %s Process: %s Failed to process file: %s" \
+                       % (current_process().name, current_process().name, xmrg_filename))
+          logger.exception(e)
         else:
-          if logger:
-            logger.error("ID: %s Process: %s Failed to process file: %s"\
-                         % (current_process().name, current_process().name, xmrg_filename))
 
+          # This is the database insert datetime.
+          # Parse the filename to get the data time.
+          (directory, filetime) = os.path.split(gpXmrg.fileName)
+          xmrg_filename = filetime
+          (filetime, ext) = os.path.splitext(filetime)
+          filetime = xmrg_proc_obj.getCollectionDateFromFilename(filetime)
+
+          try:
+            if gpXmrg.readFileHeader():
+              read_rows_start = time.time()
+              gpXmrg.readAllRows()
+              if logger:
+                logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (
+                  current_process().name, time.time() - read_rows_start, xmrg_filename))
+              # Save grids to file
+
+              gp_results = xmrg_results()
+              gp_results.datetime = filetime
+              # overlayed = gpd.overlay(gpXmrg._geo_data_frame, boundary_df, how="intersection")
+
+
+              for index, boundary_row in enumerate(boundary_frames):
+                file_start_time = time.time()
+                overlayed = gpd.overlay(boundary_row, gpXmrg._geo_data_frame, how="intersection", keep_geom_type=False)
+
+                if save_boundary_grid_cells:
+                  for ndx, row in overlayed.iterrows():
+                    gp_results.add_grid(row.Name, (row.geometry,row.Precipitation))
+                # Here we create our percentage column by applying the function in the map(). This applies to
+                # each area.
+                overlayed['percent'] = overlayed.area.map(lambda area: float(area) / float(boundary_row.area))
+                overlayed['weighted average'] = (overlayed['Precipitation']) * (overlayed['percent'])
+
+                wghtd_avg_val = sum(overlayed['weighted average'])
+                gp_results.add_boundary_result(boundary_row['Name'][0], 'weighted_average', wghtd_avg_val)
+                logger.debug("ID: %s Processed file: %s in %f seconds." % \
+                             (current_process().name, xmrg_filename, time.time()-file_start_time))
+
+
+                if write_weighted_avg_debug and wghtd_avg_val != 0:
+                  wgtd_avg_file = os.path.join(debug_dir, "%s_%s_gp.csv" % (filetime.replace(':', '_'), boundary_row['Name'][0].replace(' ', '_')))
+                  try:
+                    weighted_file_obj = open(wgtd_avg_file, "w")
+                    weighted_file_obj.write("Percent,Precipitation,Weighted Average,Grid\n")
+                    for ndx, row in overlayed.iterrows():
+                      weighted_file_obj.write("%s,%s,%s,%s\n"\
+                                              % (row['percent'], row['Precipitation'], row['weighted average'], str(row['geometry'])))
+                    weighted_file_obj.close()
+                  except Exception as e:
+                    logger.exception(e)
+                if wghtd_avg_val != 0:
+                  try:
+                    overlayed_results = os.path.join(debug_dir,
+                                                     "%s_%s_weighted-avg_results.json" % (filetime.replace(':', '_'),
+                                                                                          boundary_row.Name[0].replace(' ',
+                                                                                                                       '_')))
+                    overlayed.to_file(overlayed_results, driver="GeoJSON")
+                  except Exception as e:
+                    raise e
+                if save_boundary_grids_one_pass:
+                  try:
+                    full_data_grid = os.path.join(debug_dir,
+                                                  "%s_%s_fullgrid_.json" % (filetime.replace(':', '_'),
+                                                                            boundary_row.Name[0].replace(' ', '_')))
+                    gpXmrg._geo_data_frame.to_file(full_data_grid, driver="GeoJSON")
+                    save_boundary_grids_one_pass = False
+                  except Exception as e:
+                    logger.exception(e)
+
+              resultsQueue.put(gp_results)
+
+            else:
+              if logger:
+                logger.error("ID: %s Process: %s Failed to process file: %s"\
+                             % (current_process().name, current_process().name, xmrg_filename))
+          except Exception as e:
+            logger.error("ID: %s Process: %s Failed to process file: %s" \
+                         % (current_process().name, current_process().name, xmrg_filename))
+            logger.exception(e)
       if logger:
         logger.debug("ID: %s process finished. Processed: %d files in time: %f seconds" \
                      % (current_process().name, xmrg_file_count, time.time() - processing_start_time))
