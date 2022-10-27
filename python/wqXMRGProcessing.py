@@ -1403,7 +1403,7 @@ def process_xmrg_file_geopandas(**kwargs):
                 gp_results.add_boundary_result(boundary_row['Name'][0], 'weighted_average', wghtd_avg_val)
                 logger.debug("ID: %s Processed file: %s in %f seconds." % \
                              (current_process().name, xmrg_filename, time.time()-file_start_time))
-
+                xmrg_file_count += 1
 
                 if write_weighted_avg_debug and wghtd_avg_val != 0:
                   wgtd_avg_file = os.path.join(debug_dir, "%s_%s_gp.csv" % (filetime.replace(':', '_'), boundary_row['Name'][0].replace(' ', '_')))
