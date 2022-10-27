@@ -1570,6 +1570,7 @@ def main():
     sys.exit(-1)
 
   try:
+    start_time = time.time()
     configFile = ConfigParser.RawConfigParser()
     configFile.read(options.config_file)
 
@@ -1665,7 +1666,7 @@ def main():
       xmrg_proc.import_files(file_list)
 
   if logger:
-    logger.info("Log file closed.")
+    logger.info("Log file closed. Processing took %f seconds." % (time.time()-start_time))
 
 if __name__ == "__main__":
   main()
