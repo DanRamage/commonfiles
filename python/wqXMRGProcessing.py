@@ -1380,8 +1380,10 @@ def process_xmrg_file_geopandas(**kwargs):
               if logger:
                 logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (
                   current_process().name, time.time() - read_rows_start, xmrg_filename))
-              # Save grids to file
 
+              #precip = gpXmrg._geo_data_frame[gpXmrg._geo_data_frame.Precipitation > 0.0]
+              #if len(precip):
+              #  precip
               gp_results = xmrg_results()
               gp_results.datetime = filetime
               # overlayed = gpd.overlay(gpXmrg._geo_data_frame, boundary_df, how="intersection")
@@ -1401,8 +1403,8 @@ def process_xmrg_file_geopandas(**kwargs):
 
                 wghtd_avg_val = sum(overlayed['weighted average'])
                 gp_results.add_boundary_result(boundary_row['Name'][0], 'weighted_average', wghtd_avg_val)
-                logger.debug("ID: %s Processed file: %s in %f seconds." % \
-                             (current_process().name, xmrg_filename, time.time()-file_start_time))
+                logger.debug("ID: %s File: %s Processed boundary: %s WgtdAvg: %f in %f seconds." % \
+                             (current_process().name, xmrg_filename, boundary_row.Name[0], wghtd_avg_val, time.time()-file_start_time))
                 xmrg_file_count += 1
 
                 if write_weighted_avg_debug and wghtd_avg_val != 0:
