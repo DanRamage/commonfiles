@@ -1381,9 +1381,9 @@ def process_xmrg_file_geopandas(**kwargs):
                 logger.debug("ID: %s(%f secs) to read all rows in file: %s" % (
                   current_process().name, time.time() - read_rows_start, xmrg_filename))
 
-              precip = gpXmrg._geo_data_frame[gpXmrg._geo_data_frame.Precipitation > 0.0]
-              if len(precip):
-                print(precip)
+              #precip = gpXmrg._geo_data_frame[gpXmrg._geo_data_frame.Precipitation > 0.0]
+              #if len(precip):
+              #  print(precip)
               gp_results = xmrg_results()
               gp_results.datetime = filetime
               # overlayed = gpd.overlay(gpXmrg._geo_data_frame, boundary_df, how="intersection")
