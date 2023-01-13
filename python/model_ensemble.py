@@ -2,7 +2,6 @@ import logging.config
 from wq_prediction_tests import wqEquations
 from wq_prediction_tests import predictionLevels
 
-
 logging = logging.getLogger()
 
 
@@ -45,6 +44,12 @@ class model_ensemble(wqEquations):
 
         self.overall_prediction()
 
+    def runTestsDF(self, pd_dataframe):
+        for testObj in self.tests:
+            testObj.runTestDF(pd_dataframe)
+
+        self.overall_prediction()
+
     def overall_prediction(self):
         '''
         Purpose: From the models used, determine the model type and come up with overall prediction level. Some models
@@ -68,3 +73,4 @@ class model_ensemble(wqEquations):
 
         self.logger.debug("Overall Prediction: %d(%s)" %(self._ensemblePrediction.value, self._ensemblePrediction.__str__()))
         return self._ensemblePrediction
+

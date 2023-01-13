@@ -40,14 +40,21 @@ class cbm_model_classifier(predictionTest):
         self._predicted_values = None
         self._prediction_probabilities = None
         self._predictionLevel = prediction_levels(prediction_levels.NO_TEST)
-        self._model_data = None
+        self._X_test = None
 
     @property
     def result(self):
         return self._result
     @property
+    def prediction_level(self):
+        return self._predictionLevel
+
+    @property
     def model_data(self):
-        return self._model_data
+        data_tuples = {}
+        for column in self._X_test:
+            data_tuples[column] = self._X_test[column][0]
+        return data_tuples
     @property
     def prediction_value(self):
         return(self._predicted_values)
@@ -101,6 +108,32 @@ class cbm_model_classifier(predictionTest):
         logger.debug("Model: %s result: %s finished in %f seconds." % (self._site_name, self._result, self.test_time))
         return
 
+    def runTestDF(self, site_data):
+        try:
+            start_time = time.time()
+            logger.debug("Site: %s Model: %s test" % (self._site_name, self._model_name))
+            #Take the whole dataframe and create a new dataframe with just hte observations the model needs.
+            model_features = self._cbm_model.feature_names_
+            self._X_test = site_data[model_features].copy()
+
+            self._predicted_values = self._cbm_model.predict(self._X_test)
+            self._prediction_probabilities = self._cbm_model.predict_proba(self._X_test)
+            if self._predicted_values[0]:
+                self._predictionLevel.value = prediction_levels.HIGH
+                self._result = "High"
+            else:
+                self._predictionLevel.value = prediction_levels.LOW
+                self._result = "Low"
+
+
+            self._test_time = time.time() - start_time
+        except Exception as e:
+            logger.exception(e)
+            self._predictionLevel.value  = prediction_levels.NO_TEST
+
+        logger.debug("Model: %s result: %s finished in %f seconds." % (self._site_name, self._result, self.test_time))
+        return
+
 class cbm_model_regressor(predictionTest):
     def __init__(self,
                  site_name,
@@ -140,6 +173,9 @@ class cbm_model_regressor(predictionTest):
     @property
     def model_data(self):
         return self._model_data
+    @property
+    def prediction_level(self):
+        return self._predictionLevel
 
     def runTest(self, site_data):
         try:

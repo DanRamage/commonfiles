@@ -22,7 +22,7 @@ from shapely.geometry import Polygon, Point
 from sqlalchemy import exc
 from sqlalchemy.orm.exc import *
 from sqlalchemy import or_
-from sqlalchemy.sql import column
+from sqlalchemy.sql import column, text
 from xeniaSQLAlchemy import xeniaAlchemy, multi_obs, organization, platform, uom_type, obs_type, m_scalar_type, m_type, sensor
 
 
@@ -165,11 +165,11 @@ class platformInventory:
     #the owner of the platform may be another entity. Let's do a secondary search to see if we find a platform at the same location.        
     if(platformFound != True):
       #ST_Dwithin params Geom 1, Geom 2, Distance in meters
-      withinClause = "ST_DWithin(platform.the_geom, '%s', %4.2f)" % (stationPt.wkt, 0.03)
+      withinClause = "ST_DWithin(platform.the_geom, 'SRID=4326;%s', %4.2f)" % (stationPt.wkt, 0.03)
       #distColResult = "'%s'" % (stationPt.wkt)
       
       distRecs = self.db.session.query(platform).\
-        filter(withinClause).\
+        filter(text(withinClause)).\
         all()
       if(len(distRecs)):
         platformFound = True  
