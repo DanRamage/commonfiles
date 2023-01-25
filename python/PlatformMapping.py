@@ -1,40 +1,151 @@
-from xenia_obs_map import *
+import logging
+import json
+from xeniaSQLAlchemy import xeniaAlchemy
+
+from xeniaSQLiteAlchemy import xeniaAlchemy as sl_xeniaAlchemy
+from datetime import datetime
 
 
+class obs_map:
+    def __init__(self):
+        self.target_obs = None
+        self.target_uom = None
+        self.source_obs = None
+        self.source_uom = None
+        self.source_index = None
+        self.s_order = 1
+        self.sensor_id = None
+        self.m_type_id = None
 
 
-class PlatformMap(json_obs_map):
+class PlatformMap:
     def __init__(self):
         self._platform_handle = None
-        self._obs_mapping = None
-        return
-    def from_json(self, platform_handle, observations, **database_parameters):
+        self._obs_mapping = []
+        self._logger = logging.getLogger()
+
+    def build_mappings(self, platform_handle, observations,
+                       sqlite_db_file="",
+                       db_type="",
+                       xenia_obs_db_user="", xenia_obs_db_password="",
+                       xenia_obs_db_host="",
+                       xenia_obs_db_name=""
+                       ):
         self._platform_handle = platform_handle
+        if self.load_json(observations):
+            if self.build_database_mappings(
+                    sqlite_db_file,
+                    db_type,
+                    xenia_obs_db_user, xenia_obs_db_password,
+                    xenia_obs_db_host,
+                    xenia_obs_db_name
+
+            ):
+                return True
+        return False
+    def load_json(self, observations):
         try:
-            self._obs_mapping = json_obs_map()
-            self._obs_mapping.load_json(observations)
-            if database_parameters.get('sqlite_database_file', None):
-                    self._obs_mapping.build_db_mappings(sqlite_database_file=database_parameters['sqlite_database_file'],
-                                                       platform_handle=platform_handle)
-            else:
-                self._obs_mapping.build_db_mappings(db_connectionstring=database_parameters['db_type'],
-                                                    db_user=database_parameters['db_user'],
-                                                    db_password=database_parameters['db_password'],
-                                                    db_host=database_parameters['db_host'],
-                                                    db_name=database_parameters['db_name'],
-                                                    platform_handle=platform_handle)
+            for obs in observations:
+                xenia_obs = obs_map()
+                xenia_obs.target_obs = obs['target_obs']
+                if obs['target_uom'] is not None:
+                    xenia_obs.target_uom = obs['target_uom']
+                xenia_obs.source_obs = obs['header_column']
+                if obs['source_uom'] is not None:
+                    xenia_obs.source_uom = obs['source_uom']
+                if obs['s_order'] is not None:
+                    xenia_obs.s_order = obs['s_order']
+                self._obs_mapping.append(xenia_obs)
+
+            return True
         except Exception as e:
-            raise e
-        return
+            self._logger.exception(e)
+        return False
+    def build_database_mappings(self, sqlite_db_file="",
+                           db_type="",
+                           xenia_obs_db_user="", xenia_obs_db_password="",
+                           xenia_obs_db_host="",
+                           xenia_obs_db_name=""):
+        try:
+            db = self.connect_database(sqlite_db_file,
+                                       db_type,
+                                       xenia_obs_db_user, xenia_obs_db_password,
+                                       xenia_obs_db_host,
+                                       xenia_obs_db_name)
+            if db is not None:
+                entry_date = datetime.now()
+                for obs_rec in self._obs_mapping:
+                    if obs_rec.target_obs != 'm_date':
+                        self._logger.debug(
+                            "Platform: %s checking sensor exists %s(%s) s_order: %d" % (self._platform_handle,
+                                                                                        obs_rec.target_obs,
+                                                                                        obs_rec.target_uom,
+                                                                                        obs_rec.s_order))
+                        sensor_id = db.sensorExists(obs_rec.target_obs,
+                                                    obs_rec.target_uom,
+                                                    self._platform_handle,
+                                                    obs_rec.s_order)
+                        if sensor_id is None:
+                            self._logger.debug("Sensor does not exist, adding")
+                            platform_id = db.platformExists(self._platform_handle)
+                            sensor_id = db.newSensor(entry_date.strftime('%Y-%m-%d %H:%M:%S'),
+                                                     obs_rec.target_obs,
+                                                     obs_rec.target_uom,
+                                                     platform_id,
+                                                     1,
+                                                     0,
+                                                     obs_rec.s_order,
+                                                     None,
+                                                     False)
+                        obs_rec.sensor_id = sensor_id
+                        m_type_id = db.mTypeExists(obs_rec.target_obs, obs_rec.target_uom)
+                        obs_rec.m_type_id = m_type_id
+                db.disconnect()
+                return True
+            return False
+        except Exception as e:
+            self._logger.exception(e)
+        return False
+
+    def connect_database(self, sqlite_db_file="",
+                           db_type="",
+                           xenia_obs_db_user="", xenia_obs_db_password="",
+                           xenia_obs_db_host="",
+                           xenia_obs_db_name=""):
+        if len(sqlite_db_file) == 0:
+            db = xeniaAlchemy()
+            if (db.connectDB(db_type,
+                             xenia_obs_db_user,
+                             xenia_obs_db_password,
+                             xenia_obs_db_host,
+                             xenia_obs_db_name,
+                             False)):
+                self._logger.info(f"Succesfully connect to DB: {xenia_obs_db_name} at {xenia_obs_db_host}.")
+                return db
+            else:
+                self._logger.error(
+                    f"Unable to connect to DB: {xenia_obs_db_name} at {xenia_obs_db_host}.")
+                return None
+        else:
+            db = sl_xeniaAlchemy()
+            if db.connectDB('sqlite', None, None, sqlite_db_file, None, False):
+                self._logger.info(f"Succesfully connect to DB: {sqlite_db_file}")
+                return db
+            else:
+                self._logger.error(f"Unable to connect to DB: {sqlite_db_file}")
+                return None
 
     def get_mapping(self, observation_name, s_order=1):
         return None
+
     @property
     def platform(self):
         return self._platform_handle
+
     @property
     def observation_mappings(self):
         return self._obs_mapping
+
 
 class ModelSite:
     def __init__(self, site_name):
@@ -42,7 +153,13 @@ class ModelSite:
         self._platform_mappings = {}
         self._platform_parameters = {}
 
-    def from_json(self, platform_handle, platform_config, **database_parameters ):
+    def initialize(self, platform_handle,
+                           platform_config,
+                           sqlite_db_file="",
+                           db_type="",
+                           xenia_obs_db_user="", xenia_obs_db_password="",
+                           xenia_obs_db_host="",
+                           xenia_obs_db_name=""):
         '''
         platform_handle is the xenia platform_handle used in the database.
         platform_config is a json object. An example format:
@@ -74,11 +191,21 @@ class ModelSite:
             if param != 'observations':
                 if param not in self._platform_parameters:
                     self._platform_parameters[platform_handle][param] = platform_config[param]
-            # For the observations parameter, we build the obs map.
+            # For the observation parameter, we build the obs map.
             else:
-                platform_map = PlatformMap()
-                platform_map.from_json(platform_handle, platform_config[param], **database_parameters)
-                self._platform_mappings[platform_handle] = platform_map
+                try:
+                    platform_map = PlatformMap()
+                    platform_map.build_mappings(platform_handle,
+                                           platform_config[param],
+                                           sqlite_db_file,
+                                           db_type,
+                                           xenia_obs_db_user, xenia_obs_db_password,
+                                           xenia_obs_db_host,
+                                           xenia_obs_db_name
+                                           )
+                    self._platform_mappings[platform_handle] = platform_map
+                except Exception as e:
+                    raise e
 
         return
 
@@ -90,27 +217,50 @@ class ModelSite:
 
     def platform_observation_mapping(self, platform_handle):
         if platform_handle in self._platform_mappings:
-            return self._platform_mappings[platform_handle].observation_mappings.obs
+            return self._platform_mappings[platform_handle].observation_mappings
         return None
+
     @property
     def platforms(self):
         return self._platform_mappings.keys()
 
 
-
 class ModelSitesPlatforms:
     def __init__(self):
-        #This is a dict of the sites for the model. This will be populated with the platforms it uses.
+        # This is a dict of the sites for the model. This will be populated with the platforms it uses.
         self._sites = {}
 
-    def from_json_file(self, json_config_file, **database_parameters):
+    def initialize(self, json, json_config_file="",
+                   sqlite_db_file="",
+                   db_type="",
+                   xenia_obs_db_user="", xenia_obs_db_password="",
+                   xenia_obs_db_host="",
+                   xenia_obs_db_name=""):
+        if len(json_config_file):
+            json = self.from_json_file(json_config_file)
+        self.build_mappings(json,
+                            sqlite_db_file,
+                            db_type,
+                            xenia_obs_db_user, xenia_obs_db_password,
+                            xenia_obs_db_host,
+                            xenia_obs_db_name
+                            )
+    def from_json_file(self, json_config_file):
         try:
             with open(json_config_file, "r") as platform_json_file:
                 platforms_config_json = json.load(platform_json_file)
-                self.from_json(platforms_config_json, **database_parameters)
+                return platforms_config_json
         except Exception as e:
             raise e
-    def from_json(self, platforms_config_json, **database_parameters):
+        return None
+
+    def build_mappings(self, platforms_config_json,
+                           sqlite_db_file="",
+                           db_type="",
+                           xenia_obs_db_user="", xenia_obs_db_password="",
+                           xenia_obs_db_host="",
+                           xenia_obs_db_name=""
+                       ):
         for site in platforms_config_json:
             if site not in self._sites:
                 self._sites[site] = ModelSite(site)
@@ -118,9 +268,13 @@ class ModelSitesPlatforms:
             current_site = platforms_config_json[site]
             for platform_handle in current_site:
                 current_platform = current_site[platform_handle]
-                self._sites[site].from_json(platform_handle=platform_handle,
-                                            platform_config=current_platform,
-                                            **database_parameters)
+                self._sites[site].initialize(platform_handle,
+                                            current_platform,
+                                            sqlite_db_file,
+                                            db_type,
+                                            xenia_obs_db_user, xenia_obs_db_password,
+                                            xenia_obs_db_host,
+                                            xenia_obs_db_name)
 
     def get_site(self, site_name):
         if site_name in self._sites:
@@ -129,4 +283,4 @@ class ModelSitesPlatforms:
 
     @property
     def sites(self):
-        return(self._sites.keys())
+        return (self._sites.keys())
