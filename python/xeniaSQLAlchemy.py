@@ -343,7 +343,7 @@ class xeniaAlchemy(object):
       self.connection = self.dbEngine.connect()
       
       return(True)
-    except exc.OperationalError as e:
+    except (exc.OperationalError, Exception) as e:
       if(self.logger != None):
         self.logger.exception(e)
     return(False)
