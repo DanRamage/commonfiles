@@ -1326,7 +1326,8 @@ def process_xmrg_file_geopandas(**kwargs):
 
       save_boundary_grid_cells = True
       save_boundary_grids_one_pass = True
-      write_weighted_avg_debug = True
+      write_weighted_avg_debug = False
+      save_hourly_json_file = False
 
       # This is the database insert datetime.
       datetime = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
@@ -1348,7 +1349,8 @@ def process_xmrg_file_geopandas(**kwargs):
         try:
           boundaries_outfile = os.path.join(debug_dir,
                                             "%s_boundary.json" % (boundary_df['Name'][0].replace(' ', '_')))
-          boundary_df.to_file(boundaries_outfile, driver="GeoJSON")
+          if not os.path.exists(boundaries_outfile):
+            boundary_df.to_file(boundaries_outfile, driver="GeoJSON")
         except Exception as e:
           logger.exception(e)
       for xmrg_filename in iter(inputQueue.get, 'STOP'):
@@ -1418,7 +1420,7 @@ def process_xmrg_file_geopandas(**kwargs):
                     weighted_file_obj.close()
                   except Exception as e:
                     logger.exception(e)
-                if wghtd_avg_val != 0:
+                if save_hourly_json_file and wghtd_avg_val != 0:
                   try:
                     overlayed_results = os.path.join(debug_dir,
                                                      "%s_%s_weighted-avg_results.json" % (filetime.replace(':', '_'),
