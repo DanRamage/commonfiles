@@ -112,11 +112,12 @@ class xgb_model_classifier(predictionTest):
             start_time = time.time()
             logger.debug("Site: %s Model: %s test" % (self._site_name, self._model_name))
             #Take the whole dataframe and create a new dataframe with just hte observations the model needs.
-            model_features = self._cbm_model.feature_names_
+            model_features = self._model.feature_names_in_
+
             self._X_test = site_data[model_features].copy()
 
-            self._predicted_values = self._cbm_model.predict(self._X_test)
-            self._prediction_probabilities = self._cbm_model.predict_proba(self._X_test)
+            self._predicted_values = self._model.predict(self._X_test)
+            self._prediction_probabilities = self._model.predict_proba(self._X_test)
             if self._predicted_values[0]:
                 self._predictionLevel.value = prediction_levels.HIGH
                 self._result = "High"
