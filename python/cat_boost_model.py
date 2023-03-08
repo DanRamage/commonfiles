@@ -181,14 +181,10 @@ class cbm_model_regressor(predictionTest):
         try:
             start_time = time.time()
             logger.debug("Site: %s Model: %s test" % (self._site_name, self._model_name))
-            test_list = {}
             model_features = self._cbm_model.feature_names_
             self._X_test = site_data[model_features].copy()
-            X_test = pd.DataFrame(test_list)
-            #X_test = np.array(list(test_list.items()))
 
-
-            self._predicted_values = self._cbm_model.predict(X_test)
+            self._predicted_values = self._cbm_model.predict(self._X_test)
             self._result = self._predicted_values[0]
             if self._result >= self.high_limit:
                 self._predictionLevel.value  = prediction_levels.HIGH
