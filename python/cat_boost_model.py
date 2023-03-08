@@ -6,7 +6,7 @@ import pandas as pd
 from wq_prediction_tests import predictionTest
 from prediction_levels import prediction_levels
 
-from catboost import CatBoostClassifier
+from catboost import CatBoostClassifier, CatBoostRegressor
 
 logger = logging.getLogger()
 
@@ -144,7 +144,7 @@ class cbm_model_regressor(predictionTest):
                  model_file,
                  model_data_list):
         super().__init__(formula=None, model_name=model_name, site_name=site_name, enabled=True)
-        self._model_type = model_type
+        self._test_type = model_type
 
         self.low_limit = low_limit
         self.high_limit = high_limit
@@ -154,7 +154,7 @@ class cbm_model_regressor(predictionTest):
         self._result = None
         self._model_file = model_file
         try:
-            self._cbm_model = CatBoostClassifier()
+            self._cbm_model = CatBoostRegressor()
             self._cbm_model.load_model(self._model_file)
         except Exception as e:
             logger.exception(e)
@@ -177,32 +177,23 @@ class cbm_model_regressor(predictionTest):
     def prediction_level(self):
         return self._predictionLevel
 
-    def runTest(self, site_data):
+    def runTestDF(self, site_data):
         try:
             start_time = time.time()
             logger.debug("Site: %s Model: %s test" % (self._site_name, self._model_name))
             test_list = {}
-            for data_param in self._model_data_list:
-                test_list[data_param] = [site_data[data_param]]
+            model_features = self._cbm_model.feature_names_
+            self._X_test = site_data[model_features].copy()
             X_test = pd.DataFrame(test_list)
             #X_test = np.array(list(test_list.items()))
 
 
             self._predicted_values = self._cbm_model.predict(X_test)
-            self._prediction_probabilities = self._cbm_model.predict_proba(X_test)
-            if self._model_type == 'classifier':
-                if self._predicted_values[0]:
-                    self._predictionLevel.value = prediction_levels.HIGH
-                    self._result = "High"
-                else:
-                    self._predictionLevel.value  = prediction_levels.LOW
-                    self._result = "Low"
-
+            self._result = self._predicted_values[0]
+            if self._result >= self.high_limit:
+                self._predictionLevel.value  = prediction_levels.HIGH
             else:
-                if self._result > self.high_limit:
-                    self._predictionLevel.value  = prediction_levels.HIGH
-                else:
-                    self._predictionLevel.value  = prediction_levels.LOW
+                self._predictionLevel.value  = prediction_levels.LOW
 
             self._test_time = time.time() - start_time
         except Exception as e:
