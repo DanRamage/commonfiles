@@ -1,12 +1,11 @@
 import logging.config
-from collections import OrderedDict
 import time
-import numpy as np
-import pandas as pd
-from wq_prediction_tests import predictionTest
-from prediction_levels import prediction_levels
 
+import pandas as pd
 from catboost import CatBoostClassifier, CatBoostRegressor
+
+from prediction_levels import prediction_levels
+from wq_prediction_tests import predictionTest
 
 logger = logging.getLogger()
 
@@ -33,7 +32,10 @@ class cbm_model_classifier(predictionTest):
         self._missing_data_value = missing_data_value
         try:
             self._cbm_model = CatBoostClassifier()
-            self._cbm_model.load_model(self._model_file)
+            format = "cbm"
+            if self._model_file.find('json') != -1:
+                format = "json"
+            self._cbm_model.load_model(self._model_file, format=format)
         except Exception as e:
             logger.exception(e)
             raise e
@@ -185,7 +187,7 @@ class cbm_model_regressor(predictionTest):
             self._X_test = site_data[model_features].copy()
 
             self._predicted_values = self._cbm_model.predict(self._X_test)
-            self._result = self._predicted_values[0]
+            self._result = float(self._predicted_values[0])
             if self._result >= self.high_limit:
                 self._predictionLevel.value  = prediction_levels.HIGH
             else:

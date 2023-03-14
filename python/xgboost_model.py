@@ -1,12 +1,11 @@
 import logging.config
-from collections import OrderedDict
-from datetime import datetime
 import time
-import numpy as np
+
 import pandas as pd
-from wq_prediction_tests import predictionTest
-from prediction_levels import prediction_levels
 from xgboost import XGBRegressor, XGBClassifier
+
+from prediction_levels import prediction_levels
+from wq_prediction_tests import predictionTest
 
 logger = logging.getLogger()
 
@@ -186,7 +185,7 @@ class xgb_model_regressor(predictionTest):
             self._X_test = site_data[model_features].copy()
 
             self._predicted_values = self._model.predict(self._X_test)
-            self._result = self._predicted_values[0]
+            self._result = float(self._predicted_values[0])
             if self._predicted_values[0] >= self._high_limit:
                 self._predictionLevel.value = prediction_levels.HIGH
             else:
