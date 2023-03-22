@@ -1,6 +1,7 @@
 import logging.config
+import os.path
 import time
-
+import json
 import pandas as pd
 from catboost import CatBoostClassifier, CatBoostRegressor
 
@@ -30,11 +31,14 @@ class cbm_model_classifier(predictionTest):
         self._false_positive_threshold = false_positive_threshold
         self._false_negative_threshold = false_negative_threshold
         self._missing_data_value = missing_data_value
+        self._categorical_feature_names = []
         try:
             self._cbm_model = CatBoostClassifier()
             format = "cbm"
             if self._model_file.find('json') != -1:
                 format = "json"
+                #OPen the json file to see if we have categorical features.
+                self.find_categorical_features(self._model_file)
             self._cbm_model.load_model(self._model_file, format=format)
         except Exception as e:
             logger.exception(e)
@@ -63,6 +67,21 @@ class cbm_model_classifier(predictionTest):
     @property
     def prediction_proba(self):
         return(self.prediction_proba)
+
+    def find_categorical_features(self, model_file):
+        try:
+            with open(model_file, "r") as fp_model_file:
+                json_model = json.load(fp_model_file)
+                try:
+                    if "categorical_features" in json_model["features_info"]:
+                        for cat_feature in json_model["features_info"]["categorical_features"]:
+                            self._categorical_feature_names.append(cat_feature)
+                except Exception as e:
+                    logger.error("Unable to find sections in json.")
+                    logger.exception(e)
+        except Exception as e:
+            logger.exception(e)
+        return
 
     def runTest(self, site_data):
         try:
@@ -117,6 +136,9 @@ class cbm_model_classifier(predictionTest):
             #Take the whole dataframe and create a new dataframe with just hte observations the model needs.
             model_features = self._cbm_model.feature_names_
             self._X_test = site_data[model_features].copy()
+            #If we have any categorical features, we need to change the dftype to str.
+            for cat_feature in self._categorical_feature_names:
+                self._X_test[cat_feature['feature_id']] = self._X_test[cat_feature['feature_id']].astype('str')
 
             self._predicted_values = self._cbm_model.predict(self._X_test)
             self._prediction_probabilities = self._cbm_model.predict_proba(self._X_test)
@@ -155,9 +177,17 @@ class cbm_model_regressor(predictionTest):
         self._test_time = 0
         self._result = None
         self._model_file = model_file
+        self._categorical_feature_names = []
+
         try:
             self._cbm_model = CatBoostRegressor()
-            self._cbm_model.load_model(self._model_file)
+            format = "cbm"
+            if self._model_file.find('json') != -1:
+                format = "json"
+                #OPen the json file to see if we have categorical features.
+                self.find_categorical_features(self._model_file)
+
+            self._cbm_model.load_model(self._model_file, format=format)
         except Exception as e:
             logger.exception(e)
             raise e
@@ -179,19 +209,37 @@ class cbm_model_regressor(predictionTest):
     def prediction_level(self):
         return self._predictionLevel
 
+    def find_categorical_features(self, model_file):
+        try:
+            with open(model_file, "r") as fp_model_file:
+                json_model = json.load(fp_model_file)
+                try:
+                    if "categorical_features" in json_model["features_info"]:
+                        for cat_feature in json_model["features_info"]["categorical_features"]:
+                            self._categorical_feature_names.append(cat_feature)
+                except Exception as e:
+                    logger.error("Unable to find sections in json.")
+                    logger.exception(e)
+        except Exception as e:
+            logger.exception(e)
+        return
+
     def runTestDF(self, site_data):
         try:
             start_time = time.time()
             logger.debug("Site: %s Model: %s test" % (self._site_name, self._model_name))
             model_features = self._cbm_model.feature_names_
             self._X_test = site_data[model_features].copy()
+            #If we have any categorical features, we need to change the dftype to str.
+            for cat_feature in self._categorical_feature_names:
+                self._X_test[cat_feature['feature_id']] = self._X_test[cat_feature['feature_id']].astype('str')
 
             self._predicted_values = self._cbm_model.predict(self._X_test)
             self._result = float(self._predicted_values[0])
             if self._result >= self.high_limit:
-                self._predictionLevel.value  = prediction_levels.HIGH
+                self._predictionLevel.value = prediction_levels.HIGH
             else:
-                self._predictionLevel.value  = prediction_levels.LOW
+                self._predictionLevel.value = prediction_levels.LOW
 
             self._test_time = time.time() - start_time
         except Exception as e:
