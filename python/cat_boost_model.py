@@ -135,6 +135,7 @@ class cbm_model_classifier(predictionTest):
             logger.debug("Site: %s Model: %s test" % (self._site_name, self._model_name))
             #Take the whole dataframe and create a new dataframe with just hte observations the model needs.
             model_features = self._cbm_model.feature_names_
+            logger.debug(f"Features for model: {model_features}")
             self._X_test = site_data[model_features].copy()
             #If we have any categorical features, we need to change the dftype to str.
             for cat_feature in self._categorical_feature_names:
@@ -233,6 +234,7 @@ class cbm_model_regressor(predictionTest):
             start_time = time.time()
             logger.debug("Site: %s Model: %s test" % (self._site_name, self._model_name))
             model_features = self._cbm_model.feature_names_
+            logger.debug(f"Features for model: {model_features}")
             self._X_test = site_data[model_features].copy()
             #If we have any categorical features, we need to change the dftype to str.
             for cat_feature in self._categorical_feature_names:
