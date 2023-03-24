@@ -138,7 +138,11 @@ class cbm_model_classifier(predictionTest):
             self._X_test = site_data[model_features].copy()
             #If we have any categorical features, we need to change the dftype to str.
             for cat_feature in self._categorical_feature_names:
-                self._X_test[cat_feature['feature_id']] = self._X_test[cat_feature['feature_id']].astype('str')
+                logger.debug(f"Updating categorical feature column dtype: {cat_feature['feature_id']}")
+                if cat_feature['feature_id'] in self._X_test:
+                    self._X_test[cat_feature['feature_id']] = self._X_test[cat_feature['feature_id']].astype('str')
+                else:
+                    logger.error(f"Categorical columns {cat_feature['feature_id']} not found in dataframe")
 
             self._predicted_values = self._cbm_model.predict(self._X_test)
             self._prediction_probabilities = self._cbm_model.predict_proba(self._X_test)
@@ -232,8 +236,11 @@ class cbm_model_regressor(predictionTest):
             self._X_test = site_data[model_features].copy()
             #If we have any categorical features, we need to change the dftype to str.
             for cat_feature in self._categorical_feature_names:
-                self._X_test[cat_feature['feature_id']] = self._X_test[cat_feature['feature_id']].astype('str')
-
+                logger.debug(f"Updating categorical feature column dtype: {cat_feature['feature_id']}")
+                if cat_feature['feature_id'] in self._X_test:
+                    self._X_test[cat_feature['feature_id']] = self._X_test[cat_feature['feature_id']].astype('str')
+                else:
+                    logger.error(f"Categorical columns {cat_feature['feature_id']} not found in dataframe")
             self._predicted_values = self._cbm_model.predict(self._X_test)
             self._result = float(self._predicted_values[0])
             if self._result >= self.high_limit:
