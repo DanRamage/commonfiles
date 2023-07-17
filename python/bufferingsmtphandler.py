@@ -27,12 +27,13 @@ import string, logging, logging.handlers
 import copy
 
 class BufferingSMTPHandler(logging.handlers.BufferingHandler):
-    def __init__(self, mailhost, fromaddr, toaddrs, subject, user_and_password, capacity):
+    def __init__(self, mailhost, fromaddr, toaddrs, subject, user_and_password, capacity, port=25, use_tls=False):
         logging.handlers.BufferingHandler.__init__(self, capacity)
         logging.Handler.__init__(self)
 
         self.mailhost = mailhost
-        self.mailport = None
+        self.mailport = port
+        self.use_tls = use_tls
         self.fromaddr = fromaddr
         self.toaddrs = toaddrs
         self.subject = subject
@@ -59,7 +60,12 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
                 port = self.mailport
                 if not port:
                     port = smtplib.SMTP_PORT
-                smtp = smtplib.SMTP(self.mailhost, port)
+                if not self.use_tls:
+                    smtp = smtplib.SMTP(self.mailhost, port)
+                else:
+                    smtp = smtplib.SMTP_SSL(self.mailhost, port)
+                    smtp.ehlo()
+
                 smtp.login(self.user, self.password)
                 #msg = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (self.fromaddr, string.join(self.toaddrs, ","), self.subject)
                 msg = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (self.fromaddr, ",".join(self.toaddrs), self.subject)
@@ -67,6 +73,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
                     s = self.format(record)
                     print(s)
                     msg = msg + s + "\r\n"
+
                 smtp.sendmail(self.fromaddr, self.toaddrs, msg)
                 smtp.quit()
             except Exception as e:
