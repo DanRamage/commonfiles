@@ -95,7 +95,7 @@ class geometry_list(list):
   def load(self, file_name):
     header_row = ["WKT", "NAME"]
     try:
-      geometry_file = open(file_name, "rU")
+      geometry_file = open(file_name, "r")
     except (IOError, Exception) as e:
       self.logger.exception(e)
     else:

@@ -52,7 +52,7 @@ class wq_sample_sites(sampling_sites):
         if self.logger:
           self.logger.debug("Reading sample sites file: %s" % (kwargs['file_name']))
 
-        sites_file = open(kwargs['file_name'], "rU")
+        sites_file = open(kwargs['file_name'], "r")
         dict_file = csv.DictReader(sites_file, delimiter=',', quotechar='"', fieldnames=header_row)
       except IOError as e:
         if self.logger:

@@ -10,7 +10,7 @@ import time
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Float, func
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import eagerload
+#from sqlalchemy.orm import eagerload
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
@@ -482,12 +482,13 @@ class xeniaAlchemy(object):
   def sensorExists(self, obsName, uom, platformHandle, sOrder=1 ):
     
     try:  
+
       rec = self.session.query(sensor.row_id)\
-        .join((platform, platform.row_id == sensor.platform_id))\
-        .join((m_type, m_type.row_id == sensor.m_type_id))\
-        .join((m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id))\
-        .join((obs_type, obs_type.row_id == m_scalar_type.obs_type_id))\
-        .join((uom_type, uom_type.row_id == m_scalar_type.uom_type_id))\
+        .join(platform, platform.row_id == sensor.platform_id)\
+        .join(m_type, m_type.row_id == sensor.m_type_id)\
+        .join(m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id)\
+        .join(obs_type, obs_type.row_id == m_scalar_type.obs_type_id)\
+        .join(uom_type, uom_type.row_id == m_scalar_type.uom_type_id)\
         .filter(sensor.s_order == sOrder)\
         .filter(platform.platform_handle == platformHandle)\
         .filter(obs_type.standard_name == obsName)\
@@ -509,40 +510,40 @@ class xeniaAlchemy(object):
     if(mTypeId == None):
       mTypeId = self.mTypeExists(obsName, uom)
       #TODO: Add all the surrounding uom, and obs entries, m_type and scalar.
-      if(mTypeId == None):
+      if mTypeId is None:
         #If we want to add the obs type and uom type, we have to add them to add to tables: obs_type, uom_type, m_scalar_type
         #before we can add the m_type.
-        if(addObsAndUOM):
+        if addObsAndUOM:
           #Does obs_type exist? If not, we attempt to add.
           obsId = self.obsTypeExists(obsName)
-          if(obsId == -1):
+          if obsId is None:
             #Add the obs to the obs_type table.
             obsId = self.addObsType(obsName)
             #Cannot continue if we were unable to add.
-            if(obsId == None):
-              return(None)
+            if obsId is None:
+              return None
             
           #Does the uom type exist? If not, we attempt to add.
           uomId = self.uomTypeExists(uom)
-          if(uomId == -1):            
+          if uomId is None:
             uomId = self.addUOMType(uom)
             #Cannot continue if we were unable to add.
-            if(uomId == None):
-              return(None)
+            if uomId is None:
+              return None
             
           #Does the scalar_id exist?
           mScalarId = self.scalarTypeExists(obsId, uomId)  
-          if(mScalarId == -1):
+          if mScalarId is None:
             mScalarId = self.addScalarType(obsId, uomId)
-            if(mScalarId == None):
+            if mScalarId is None:
               return(None)
           
           #Now we can add the m_type
           mTypeId = self.addMType(mScalarId)
-          if(mTypeId == None):
+          if mTypeId is None:
             return(None)
         else:
-          if(self.logger):
+          if self.logger:
             self.logger.error("m_type does not exist, cannot add sensor: %s(%s) platform: %d" % (obsName, uom, platformId))
             return(None)
 
@@ -554,13 +555,13 @@ class xeniaAlchemy(object):
                          active = active,
                          s_order = sOrder)
       sensorId = self.addRec(sensorRec, True)
-      if(sensorId == None):
-        if(self.logger):
+      if sensorId is None:
+        if self.logger:
           self.logger.error("Unable to add sensor: %s(%s)." % (obsName,uom))
       else:
-        if(self.logger):
+        if self.logger:
           self.logger.debug("Added sensor: %s(%s) sOrder: %d on platform: %d" % (obsName, uom, sOrder, platformId))
-    return(sensorId)
+    return sensorId
 
   """
   Function: mTypeExists
@@ -574,9 +575,9 @@ class xeniaAlchemy(object):
   def mTypeExists(self, obsName, uom):
     try:  
       rec = self.session.query(m_type.row_id)\
-        .join((m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id))\
-        .join((obs_type, obs_type.row_id == m_scalar_type.obs_type_id))\
-        .join((uom_type, uom_type.row_id == m_scalar_type.uom_type_id))\
+        .join(m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id)\
+        .join(obs_type, obs_type.row_id == m_scalar_type.obs_type_id)\
+        .join(uom_type, uom_type.row_id == m_scalar_type.uom_type_id)\
         .filter(obs_type.standard_name == obsName)\
         .filter(uom_type.standard_name == uom).one()
       return(rec.row_id)

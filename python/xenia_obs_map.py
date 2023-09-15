@@ -112,6 +112,7 @@ class json_obs_map:
       self.obs.append(xenia_obs)
 
   def build_db_mappings(self, **kwargs):
+    add_missing = kwargs.get('add_missing', False)
     if kwargs.get('sqlite_database_file', None) is None:
       db = xeniaAlchemy()
       if (db.connectDB(kwargs['db_connectionstring'],
@@ -150,7 +151,7 @@ class json_obs_map:
                                    0,
                                    obs_rec.s_order,
                                    None,
-                                   False)
+                                   add_missing)
         obs_rec.sensor_id = sensor_id
         m_type_id = db.mTypeExists(obs_rec.target_obs, obs_rec.target_uom)
         obs_rec.m_type_id = m_type_id
