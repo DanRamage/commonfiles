@@ -479,11 +479,11 @@ class xeniaAlchemy(object):
     
     try:  
       rec = self.session.query(sensor.row_id)\
-        .join((platform, platform.row_id == sensor.platform_id))\
-        .join((m_type, m_type.row_id == sensor.m_type_id))\
-        .join((m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id))\
-        .join((obs_type, obs_type.row_id == m_scalar_type.obs_type_id))\
-        .join((uom_type, uom_type.row_id == m_scalar_type.uom_type_id))\
+        .join(platform, platform.row_id == sensor.platform_id)\
+        .join(m_type, m_type.row_id == sensor.m_type_id)\
+        .join(m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id)\
+        .join(obs_type, obs_type.row_id == m_scalar_type.obs_type_id)\
+        .join(uom_type, uom_type.row_id == m_scalar_type.uom_type_id)\
         .filter(sensor.s_order == sOrder)\
         .filter(platform.platform_handle == platformHandle)\
         .filter(obs_type.standard_name == obsName)\
@@ -570,9 +570,9 @@ class xeniaAlchemy(object):
   def mTypeExists(self, obsName, uom):
     try:  
       rec = self.session.query(m_type.row_id)\
-        .join((m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id))\
-        .join((obs_type, obs_type.row_id == m_scalar_type.obs_type_id))\
-        .join((uom_type, uom_type.row_id == m_scalar_type.uom_type_id))\
+        .join(m_scalar_type, m_scalar_type.row_id == m_type.m_scalar_type_id)\
+        .join(obs_type, obs_type.row_id == m_scalar_type.obs_type_id)\
+        .join(uom_type, uom_type.row_id == m_scalar_type.uom_type_id)\
         .filter(obs_type.standard_name == obsName)\
         .filter(uom_type.standard_name == uom).one()
       return(rec.row_id)
