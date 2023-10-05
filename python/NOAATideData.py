@@ -17,8 +17,8 @@ import numpy as np
 
 from peakdetect_algorithms import peakdetect as pda_peakdetect
 import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
 
 #import numpy as np
 
