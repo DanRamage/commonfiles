@@ -12,8 +12,8 @@ else:
   import configparser as ConfigParser
 import traceback
 
-import shapely
-from shapely.geometry import Polygon, Point
+#import shapely
+#from shapely.geometry import Polygon, Point
 
 from sqlalchemy import exc
 from sqlalchemy.orm.exc import *
