@@ -43,11 +43,16 @@ class MPDataSaverV2(Process):
             logger_name = self._logger_name
             logger_config = self._log_config
             # Each worker will set its own filename for the filehandler
-            base_filename = logger_config['handlers']['file_handler']['filename']
+            #Search for the file_handler handler, we do a substring search for "file_handler".
+            base_filename = "./mp_logger.log"
+            file_handler_name = [handler for handler in logger_config['handlers'] if 'file_handler' in handler]
+            if len(file_handler_name):
+                base_filename = logger_config['handlers'][file_handler_name[0]]['filename']
+
             filename_parts = os.path.split(base_filename)
             filename, ext = os.path.splitext(filename_parts[1])
             worker_filename = os.path.join(filename_parts[0], f"{filename}_{current_process().name.replace(':', '_')}{ext}")
-            logger_config['handlers']['file_handler']['filename'] = worker_filename
+            logger_config['handlers'][file_handler_name[0]]['filename'] = worker_filename
             logging.config.dictConfig(logger_config)
             logger = logging.getLogger(logger_name)
             logger.debug(f"{current_process().name} starting data saver worker.")
