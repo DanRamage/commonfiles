@@ -56,7 +56,7 @@ class MPDataSaverV2(Process):
             logger = logging.getLogger(current_process().name.replace(':', '_'))
             logger.setLevel(logging.DEBUG)
             formatter = logging.Formatter("%(asctime)s,%(levelname)s,%(funcName)s,%(lineno)d,%(message)s")
-            fh = logging.handlers.RotatingFileHandler(worker_filename)
+            fh = logging.handlers.RotatingFileHandler(worker_filename, maxBytes=5000000, backupCount=5)
             ch = logging.StreamHandler()
             fh.setLevel(logging.DEBUG)
             ch.setLevel(logging.DEBUG)
@@ -110,7 +110,7 @@ class MPDataSaverV2(Process):
                             rec_count += 1
                     # Trying to add record that already exists.
                     except exc.IntegrityError as e:
-                        #logger.error(f"Duplicate sensor id: {data_rec.sensor_id} Datetime: {data_rec.m_date}")
+                        logger.error(f"Duplicate sensor id: {data_rec.sensor_id} Datetime: {data_rec.m_date}")
                         db.session.rollback()
                     except Exception as e:
                         db.session.rollback()
