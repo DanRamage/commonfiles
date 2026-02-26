@@ -41,6 +41,10 @@ class geoXmrg:
         self._maximum_lat_lon = maximum_lat_lon
         self._data_multiplier = data_multiplier
 
+    @property
+    def geo_data_frame(self):
+        return self._geo_data_frame
+
     """
       Function: Reset
       Purpose: Prepares the xmrgFile object for reuse. Resets various variables and closes the currently open file object.
