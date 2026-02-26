@@ -1295,6 +1295,8 @@ def process_xmrg_file_geopandas(**kwargs):
     try:
       processing_start_time = time.time()
       xmrg_file_count = 1
+      process_name = current_process().name
+
       logger = None
       if 'logger' in kwargs:
         logger_name = kwargs['logger_name']
@@ -1326,6 +1328,7 @@ def process_xmrg_file_geopandas(**kwargs):
 
       save_boundary_grid_cells = True
       save_boundary_grids_one_pass = True
+      write_percentages_grids_one_pass = True
       write_weighted_avg_debug = False
       save_hourly_json_file = False
 
@@ -1340,11 +1343,11 @@ def process_xmrg_file_geopandas(**kwargs):
       # Build boundary dataframes
       boundary_frames = []
       for boundary in boundaries:
+        logger.info(f"{process_name} adding boundary {boundary.name}")
         df = pd.DataFrame([[boundary.name, boundary.object_geometry]], columns=['Name', 'Boundaries'])
         boundary_df = gpd.GeoDataFrame(df, geometry=df.Boundaries)
         boundary_df = boundary_df.drop(columns=['Boundaries'])
         boundary_df.set_crs(epsg=4326, inplace=True)
-        boundary_frames.append(boundary_df)
         # Write out a geojson file we can use to visualize the boundaries if needed.
         try:
           boundaries_outfile = os.path.join(debug_dir,
@@ -1353,6 +1356,12 @@ def process_xmrg_file_geopandas(**kwargs):
             boundary_df.to_file(boundaries_outfile, driver="GeoJSON")
         except Exception as e:
           logger.exception(e)
+
+        # Convert to a projected CRS.
+        boundary_df.to_crs(epsg=3857, inplace=True)
+        boundary_frames.append(boundary_df)
+
+      logger.info(f"{process_name} begin processing queue.")
       for xmrg_filename in iter(inputQueue.get, 'STOP'):
         tot_file_time_start = time.time()
         if logger:
@@ -1393,14 +1402,15 @@ def process_xmrg_file_geopandas(**kwargs):
 
               for index, boundary_row in enumerate(boundary_frames):
                 file_start_time = time.time()
-                overlayed = gpd.overlay(boundary_row, gpXmrg._geo_data_frame, how="intersection", keep_geom_type=False)
+                xmrg_projected = gpXmrg.geo_data_frame.to_crs(epsg=3857, inplace=False)
+                overlayed = gpd.overlay(boundary_row, xmrg_projected, how="intersection", keep_geom_type=False)
 
                 if save_boundary_grid_cells:
                   for ndx, row in overlayed.iterrows():
                     gp_results.add_grid(row.Name, (row.geometry,row.Precipitation))
                 # Here we create our percentage column by applying the function in the map(). This applies to
                 # each area.
-                overlayed['percent'] = overlayed.area.map(lambda area: float(area) / float(boundary_row.area))
+                overlayed['percent'] = overlayed.area.map(lambda area: float(area) / float(boundary_row.area.iloc[0]))
                 overlayed['weighted average'] = (overlayed['Precipitation']) * (overlayed['percent'])
 
                 wghtd_avg_val = sum(overlayed['weighted average'])
@@ -1409,31 +1419,30 @@ def process_xmrg_file_geopandas(**kwargs):
                              (current_process().name, xmrg_filename, boundary_row.Name[0], wghtd_avg_val, time.time()-file_start_time))
                 xmrg_file_count += 1
 
-                if write_weighted_avg_debug and wghtd_avg_val != 0:
-                  wgtd_avg_file = os.path.join(debug_dir, "%s_%s_gp.csv" % (filetime.replace(':', '_'), boundary_row['Name'][0].replace(' ', '_')))
-                  try:
-                    weighted_file_obj = open(wgtd_avg_file, "w")
-                    weighted_file_obj.write("Percent,Precipitation,Weighted Average,Grid\n")
-                    for ndx, row in overlayed.iterrows():
-                      weighted_file_obj.write("%s,%s,%s,%s\n"\
-                                              % (row['percent'], row['Precipitation'], row['weighted average'], str(row['geometry'])))
-                    weighted_file_obj.close()
-                  except Exception as e:
-                    logger.exception(e)
-                if save_hourly_json_file and wghtd_avg_val != 0:
-                  try:
-                    overlayed_results = os.path.join(debug_dir,
-                                                     "%s_%s_weighted-avg_results.json" % (filetime.replace(':', '_'),
-                                                                                          boundary_row.Name[0].replace(' ',
-                                                                                                                       '_')))
-                    overlayed.to_file(overlayed_results, driver="GeoJSON")
-                  except Exception as e:
-                    raise e
+                if save_boundary_grid_cells or write_percentages_grids_one_pass:
+                  # We want EPSG 4326 for our output debug files.
+                  overlayed_4326 = overlayed.to_crs(epsg=4326, inplace=False)
+                  if save_boundary_grid_cells:
+                    for ndx, row in overlayed_4326.iterrows():
+                      gp_results.add_grid(row.Name, (row.geometry, row.Precipitation))
+
+                  if write_percentages_grids_one_pass:
+                    try:
+                      percentage_file = os.path.join(debug_dir,
+                                                     f"{overlayed['Name'][0].replace(' ', '_')}_percentage.json")
+                      if not os.path.exists(percentage_file):
+                        overlayed_4326.to_file(percentage_file, driver="GeoJSON")
+                      # Once we've written out each boundary, we can stop.
+                      if index == len(boundary_frames) - 1:
+                        write_percentages_grids_one_pass = False
+                    except Exception as e:
+                      logger.exception(e)
                 if save_boundary_grids_one_pass:
                   try:
                     full_data_grid = os.path.join(debug_dir,
-                                                  "%s_%s_fullgrid_.json" % (filetime.replace(':', '_'),
-                                                                            boundary_row.Name[0].replace(' ', '_')))
+                                                  "%s_%s_fullgrid_.json" % (
+                                                    filetime.replace(':', '_'),
+                                                    boundary_row.Name[0].replace(' ', '_')))
                     gpXmrg._geo_data_frame.to_file(full_data_grid, driver="GeoJSON")
                     save_boundary_grids_one_pass = False
                   except Exception as e:
