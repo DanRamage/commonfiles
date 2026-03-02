@@ -373,6 +373,7 @@ class wqXMRGProcessing(object):
     #self.configSettings = configSettings(kwargs['config_file'])
     try:
       configFile = ConfigParser.RawConfigParser()
+      self.logger.debug(f"Processing config files: {kwargs['config_file']}")
       configFile.read(kwargs['config_file'])
 
       bbox = configFile.get('nexrad_database', 'bbox')
