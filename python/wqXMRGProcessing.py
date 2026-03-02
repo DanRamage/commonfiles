@@ -409,7 +409,8 @@ class wqXMRGProcessing(object):
           self.writePrecipToKML = 0
           if self.logger is not None:
             self.logger.error("No KML directory provided, will not write shapefiles.")
-
+      else:
+        self.logger.debug("Write precip to KML not set.")
       self.saveAllPrecipVals = configFile.getboolean('nexrad_database', 'saveAllPrecipVals')
 
       #self.createPolygonsFromGrid = configFile.getboolean('nexrad_database', 'createPolygonsFromGrid')
