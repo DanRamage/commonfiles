@@ -403,6 +403,8 @@ class wqXMRGProcessing(object):
       #If we are going to write shapefiles, get the output directory.
       if(self.writePrecipToKML):
         self.KMLDir = configFile.get('nexrad_database', 'KMLDir')
+        if not os.path.exists(self.KMLDir):
+          os.makedirs(self.KMLDir)
         if(len(self.KMLDir) == 0):
           self.writePrecipToKML = 0
           if self.logger is not None:
