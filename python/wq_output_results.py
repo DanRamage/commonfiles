@@ -234,10 +234,29 @@ class wq_station_advisories_file:
               file_beachadvisories = []
             # Make sure the date is not already in the list.
             for test_data in beach_advisories:
+              existing_data = None
+
+              for file_test_data in file_beachadvisories:
+                if file_test_data['date'] == test_data['date']:
+                  existing_data = file_test_data
+                  break
+
+              if existing_data is None:
+                self.logger.debug("Station: %s adding date: %s" % (self.sample_site.name, test_data['date']))
+                file_beachadvisories.append(test_data)
+              else:
+                self.logger.debug(
+                  "Station: %s date: %s already in list, updating" % (self.sample_site.name, test_data['date']))
+                existing_data.update(test_data)
+
+              '''
               if not contains(file_beachadvisories, lambda x: x['date'] == test_data['date']):
                 self.logger.debug("Station: %s adding date: %s" % (self.sample_site.name, test_data['date']))
                 file_beachadvisories.append(test_data)
                 file_beachadvisories.sort(key=lambda x: x['date'], reverse=False)
+              else:
+                self.logger.debug("Station: %s date: %s already in list, updating" % (self.sample_site.name, test_data['date']))
+              '''
       except (IOError, Exception) as e:
         if self.logger:
           self.logger.exception(e)
